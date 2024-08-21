@@ -7,5 +7,6 @@ urlpatterns = [
     # base urls
     path('library/', views.LibraryView.as_view(), name='library'),
     path('browse/', views.BrowseView.as_view(), name='browse'),
+    path('browse_search/', views.BrowseSearch.as_view(), name='browse_search'),
     path('settings/', views.SettingsView.as_view(), name='settings'),
 ]

@@ -1,13 +1,36 @@
 {% extends 'base.html' %}
+{% load static %}
+
 {% block title_block %}
     Library
 {% endblock %}
-{% load static %}
 
 <!-- HEADING -->
 {% block body_block %}
-<div class="text-center p-4">
 
+<div class="container">
+    {% if manhwas %}
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for manhwa in manhwas %}
+        <div class="col">
+        <div class="card h-100">
+            <img src="{{ manhwa.banner }}" class="card-img-top" alt="{{ manhwa.title }} banner">
+            <div class="card-body">
+            <h5 class="card-title">{{ manhwa.title }}</h5>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="text-center my-5">
+        <p class="display-1 text-muted">¯\_(ツ)_/¯</p>
+        <h4>No results were found.</h4>
+    </div>
+    {% endif %}
 </div>
+{% endblock %}
 
+{% block script_block %}
+<script src="{% static "js/library-search.js" %}" crossorigin="anonymous"></script>
 {% endblock %}

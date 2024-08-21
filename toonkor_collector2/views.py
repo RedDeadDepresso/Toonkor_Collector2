@@ -1,3 +1,6 @@
+import re
+import requests
+
 from django.shortcuts import render
 
 # Create your views here.
@@ -13,17 +16,18 @@ from django.utils.decorators import method_decorator
 from django.urls import reverse
 from django.views import View
 
+from toonkor_collector2.toonkor_api import ToonkorAPI
+from toonkor_collector2.models import Manhwa, Chapter
+
 
 # Views at the core of our applications, usually shared between multiple pages/templates
+toonkor_api = ToonkorAPI()
+
+
 class LibraryView(View):
     def get(self, request):
-        context_dict = {}
-        return render(request, 'library.html', context=context_dict)
-
-class BrowseView(View):
-    def get(self, request):
-        context_dict = {}
-        return render(request, 'library.html', context=context_dict)
+        manhwas = Manhwa.objects.all().order_by('title')
+        return render(request, 'library.html', {'manhwas': manhwas})
     
 
 class SettingsView(View):
@@ -46,3 +50,49 @@ class ThemeView(View):
             return response
         else:
             return HttpResponse(-1)
+        
+
+class LibrarySearch(View): 
+    pass
+                    
+
+class BrowseSearch(View):
+    def contains_korean(self, text):
+        # Regular expression to match Korean characters
+        korean_regex = re.compile('[\uac00-\ud7af]')
+        
+        # Search for any Korean character in the text
+        return bool(korean_regex.search(text))
+    
+    def get_korean_title(self, query):
+        base_url = "https://api.mangadex.org"
+
+        r = requests.get(
+            f"{base_url}/manga",
+            params={"title": query}
+        )
+
+        for result in r.json()["data"]:
+            alt_titles = result["attributes"]["altTitles"]
+            for alt_title in alt_titles:
+                if alt_title.get("ko"):
+                    print(alt_title["ko"])
+                    return alt_title["ko"]
+                
+        return query
+   
+    def get(self, request):
+        query = request.GET.get('query')
+        if not self.contains_korean(query):
+            query = self.get_korean_title(query)
+        return JsonResponse(toonkor_api.search(query))
+
+    
+class BrowseView(View):
+    def get(self, request):
+        context_dict = {}
+        return render(request, 'browse.html', context=context_dict)
+    
+
+class ManhwaView(View):
+    pass
