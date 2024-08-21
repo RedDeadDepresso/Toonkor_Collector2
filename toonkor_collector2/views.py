@@ -76,7 +76,6 @@ class BrowseSearch(View):
             alt_titles = result["attributes"]["altTitles"]
             for alt_title in alt_titles:
                 if alt_title.get("ko"):
-                    print(alt_title["ko"])
                     return alt_title["ko"]
                 
         return query

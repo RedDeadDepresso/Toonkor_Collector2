@@ -1,5 +1,26 @@
 $(document).ready(function() {
-    $('#search').on('keydown', function(event) {
+    let typingTimer;                // Timer identifier
+    let typingDelay = 1000;         // Delay in milliseconds (2 seconds)
+    let searchInput = $('#search'); // Input element
+
+    // On keyup, start the countdown
+    searchInput.on('keyup', function() {
+        clearTimeout(typingTimer);  // Clear the previous timer
+        typingTimer = setTimeout(doneTyping, typingDelay); // Start a new timer
+    });
+
+    // On keydown, clear the timer (if the user is typing)
+    searchInput.on('keydown', function() {
+        clearTimeout(typingTimer); // Reset the timer if the user presses another key
+    });
+
+    // User is "finished typing," do something
+    function doneTyping() {
+        let query = searchInput.val();
+        reactSearch(query); // Call your function, e.g., reactSearch(query)
+    }
+
+    searchInput.on('keydown', function(event) {
         if (event.keyCode === 13) { // 13 is the Enter key code
             event.preventDefault(); // Prevent the default action (form submission, etc.)
             reactSearch(); // Call your function
