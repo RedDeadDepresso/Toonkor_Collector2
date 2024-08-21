@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+{% load static %}
+{% load tags %}
+
+
+<html lang="en" data-bs-theme="{% theme %}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title_block %}{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="icon" href="{% static 'images/favicon.ico' %}">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="{% static 'css/select2-bootstrap5-theme/select2-bootstrap5.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/select2-bootstrap5-theme/select2-bootstrap5-dark.min.css' %}">
+    {% block head_block %}{% endblock %}
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar fixed-top navbar-expand-lg bg-body-tertiary">
+    <div class="container-fluid">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link" aria-current="page" href="{% url 'toonkor_collector2:library' %}">Library</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" aria-current="page" href="{% url 'toonkor_collector2:browse' %}">Browse</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" aria-current="page" href="{% url 'toonkor_collector2:settings' %}">Settings</a>
+                </li>
+            </ul>
+
+            <!-- SEARCH BAR -->
+            <div class="mx-5 order-0">
+                <form role="search" method="GET" action="">
+                    <div class="container">
+                       <div class="row g-0">
+                            <div class="col-6">
+                                <input class="form-control" type="search" placeholder="Search" aria-label="Search" name="searched">
+                            </div>
+                            <div class="col-2">
+                                <button class="btn btn-outline-success" type="submit">Search</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<br/><br/>
+
+<br/><br/>
+<!-- MAIN -->
+<main>
+    {% block body_block %}{% endblock %}
+</main>
+    <!-- FOOTER -->
+     <footer>
+        {% block footer_block %}
+        {% endblock %}
+     </footer>
+
+    
+<script src="{% static "js/jquery-3.6.0.min.js" %}" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="{% static "js/theme.js" %}" crossorigin="anonymous"></script>
+{% block script_block %}{% endblock %}
+</body>
+</html>
