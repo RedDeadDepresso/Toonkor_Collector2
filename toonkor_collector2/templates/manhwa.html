@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title_block %}
+    {{ manhwa.title }}
+{% endblock %}
+
+<!-- HEADING -->
+{% block body_block %}
+
+<div class="container">
+    <div class="card mb-3"">
+        <div class="row g-0">
+          <div class="col-md-4">
+            <img src="{{ manhwa.thumbnail_url }}" class="img-fluid rounded-start" alt="{{ manhwa.title }} banner">
+          </div>
+          <div class="col-md-8">
+            <div class="card-body">
+                <h5 class="card-title">{{ manhwa.title }}</h5>
+              <p class="card-text">{{ manhwa.description }}</p>
+              <div class="list-group">
+                {% for chapter in manhwa.chapters %}
+                <a href="{{ chapter.url }}" class="list-group-item list-group-item-action">
+                  <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">Chapter {{ chapter.index }}</h5>
+                    <small>{{ chapter.date_upload|timesince }} ago</small>
+                  </div>
+                </a>
+                {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+</div>
+
+
+{% endblock %}

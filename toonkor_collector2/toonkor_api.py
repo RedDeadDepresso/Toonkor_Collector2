@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import List, Optional
 from bs4 import BeautifulSoup
 import requests
+import re
 
 
 class ToonkorAPI:
@@ -21,7 +22,7 @@ class ToonkorAPI:
 
     def fetch_toonkor_url(self):
         response = self.client.get(self.telegram_url, headers=self.headers)
-        soup = BeautifulSoup(response.text, 'html.parser')
+        soup = BeautifulSoup(response.text, 'lxml')
         a_tags = soup.select('div.tgme_widget_message_text.js-message_text > a')
         for a_tag in reversed(a_tags):
             if "toonkor" in a_tag.text:
@@ -101,12 +102,14 @@ class ToonkorAPI:
         author = document.select_one("td.bt_label span.bt_data").text
         description = document.select_one("td.bt_over").text
         thumbnail_url = document.select_one("td.bt_thumb img")['src']
+        chapters = [self.chapter_from_element(x) for x in document.select(self.chapter_list_selector())]
 
         return {
             "title": title,
             "author": author,
             "description": description,
-            "thumbnail_url": thumbnail_url
+            "thumbnail_url": f"{self.base_url}/{thumbnail_url}",
+            "chapters": chapters,
         }
 
     # Chapters
@@ -116,19 +119,19 @@ class ToonkorAPI:
 
     def chapter_from_element(self, element) -> dict:
         url = element.select_one("td.content__title")['data-role']
-        name = element.select_one("td.content__title").text
+        index = re.findall(r'\d+', element.select_one("td.content__title").text)[-1]
         date_upload = self.to_date(element.select_one("td.episode__index").text)
 
         return {
             "url": url,
-            "name": name,
+            "index": index,
             "date_upload": date_upload
         }
 
     @staticmethod
     def to_date(date_str: str) -> int:
         date_format = "%Y-%m-%d"
-        return int(datetime.strptime(date_str, date_format).timestamp())
+        return datetime.strptime(date_str, date_format)
 
     # Pages
 
@@ -168,17 +171,6 @@ class ToonkorAPI:
             "Completed": "/%EC%99%84%EA%B2%B0",
         }
 
-    # Preferences
-
-    def setup_preference_screen(self, screen):
-        base_url_pref = {
-            "key": "Override BaseUrl",
-            "title": "Override BaseUrl",
-            "summary": "Override default domain with a different one",
-            "default": self.base_url
-        }
-        screen.add(base_url_pref)
-
     def search(self, query):
         filters = {
             "type": "/%EB%8B%A8%ED%96%89%EB%B3%B8",  # Optional: specify type (e.g., "Manga")
@@ -187,7 +179,7 @@ class ToonkorAPI:
         search_url = self.search_manga_request(1, query, filters)
 
         response = self.client.get(search_url, headers=self.headers)
-        soup = BeautifulSoup(response.text, 'html.parser')
+        soup = BeautifulSoup(response.text, 'lxml')
 
         # Parse the search results
         output = {"results":[]}
@@ -197,9 +189,10 @@ class ToonkorAPI:
         
         return output
     
-    def get_manga_details(self, manga_url):
+    def get_manga_details(self, slug):
+        manga_url = f"{self.base_url}/{slug}" 
         response = self.client.get(manga_url, headers=self.headers)
-        soup = BeautifulSoup(response.text, 'html.parser')
+        soup = BeautifulSoup(response.text, 'lxml')
         return self.manga_details_parse(soup)
 
 
