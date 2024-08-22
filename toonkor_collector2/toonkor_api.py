@@ -5,19 +5,29 @@ from typing import List, Optional
 from bs4 import BeautifulSoup
 import requests
 
+
 class ToonkorAPI:
-    def __init__(self, base_url: str = "https://toonkor429.com"):
+    def __init__(self):
         self.name = "Toonkor"
         self.lang = "ko"
+        self.telegram_url = "https://t.me/s/new_toonkor"
         self.supports_latest = True
-        self.base_url = base_url
         self.client = requests.Session()
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
         }
 
-    # Popular
+        self.base_url = self.fetch_toonkor_url()
 
+    def fetch_toonkor_url(self):
+        response = self.client.get(self.telegram_url, headers=self.headers)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        a_tags = soup.select('div.tgme_widget_message_text.js-message_text > a')
+        for a_tag in reversed(a_tags):
+            if "toonkor" in a_tag.text:
+                return a_tag.text
+            
+    # Popular
     webtoons_request_path = "/%EC%9B%B9%ED%88%B0"
 
     def popular_manga_request(self, page: int) -> str:
@@ -186,3 +196,11 @@ class ToonkorAPI:
             output["results"].append(manga)
         
         return output
+    
+    def get_manga_details(self, manga_url):
+        response = self.client.get(manga_url, headers=self.headers)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        return self.manga_details_parse(soup)
+
+
+toonkor_api = ToonkorAPI()

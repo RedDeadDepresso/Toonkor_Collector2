@@ -16,24 +16,15 @@ from django.utils.decorators import method_decorator
 from django.urls import reverse
 from django.views import View
 
-from toonkor_collector2.toonkor_api import ToonkorAPI
+from toonkor_collector2.toonkor_api import toonkor_api
 from toonkor_collector2.models import Manhwa, Chapter
 
 
 # Views at the core of our applications, usually shared between multiple pages/templates
-toonkor_api = ToonkorAPI()
-
-
 class LibraryView(View):
     def get(self, request):
         manhwas = Manhwa.objects.all().order_by('title')
         return render(request, 'library.html', {'manhwas': manhwas})
-    
-
-class SettingsView(View):
-    def get(self, request):
-        context_dict = {}
-        return render(request, 'library.html', context=context_dict)
     
 
 class ThemeView(View):
@@ -51,6 +42,22 @@ class ThemeView(View):
         else:
             return HttpResponse(-1)
         
+    
+class SetToonkorUrlView(View):
+    def get(self, request):
+        toonkor_url = request.GET.get('toonkor_url')
+        response = HttpResponse("Url set to: " + toonkor_url)
+        response.set_cookie('toonkor_url', toonkor_url)
+        toonkor_api.base_url = toonkor_url
+        return response
+    
+
+class FetchToonkorUrl(View):
+    def get(self, request):
+        url = toonkor_api.fetch_toonkor_url()
+        toonkor_api.base_url = url
+        return HttpResponse(url)
+
 
 class LibrarySearch(View): 
     pass

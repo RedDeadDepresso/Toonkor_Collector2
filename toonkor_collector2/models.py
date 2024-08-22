@@ -13,5 +13,5 @@ class Manhwa(models.Model):
 
 class Chapter(models.Model):
     manhwa = models.ForeignKey(Manhwa, on_delete=models.CASCADE)
-    translated = models.BooleanField(default=False)
     path = models.FilePathField()
+    translated_path = models.FilePathField()
