@@ -6,6 +6,7 @@ class Manhwa(models.Model):
     author = models.CharField(max_length=512, blank=True)
     description = models.TextField(blank=True)
     thumbnail = models.ImageField(blank=True)
+    slug = models.SlugField(default='')
 
 
 class Chapter(models.Model):

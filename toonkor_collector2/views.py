@@ -114,7 +114,14 @@ class AddLibrary(View):
             title=manhwa_dict["title"],
             author=manhwa_dict["author"],
             description=manhwa_dict["description"],
+            slug=manhwa_dict["slug"]
         )
         manhwa.save()
-        return HttpResponse("manhwa added")
+        return JsonResponse({"status": "success"})
         
+
+class RemoveLibrary(View):
+    def get(self, request):
+        manhwa_slug = request.GET.get("slug")
+        Manhwa.objects.filter(slug=manhwa_slug).delete()
+        return JsonResponse({"status": "success"})

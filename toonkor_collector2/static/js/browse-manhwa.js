@@ -1,16 +1,43 @@
-$(document).ready(function(){
-    $(document).on('click', '#add_library', function(){
-      var slug = $('#add_library').attr("value");
-      $.ajax({
-        url: '/toonkor_collector2/add_library/',
-        type: 'GET',
-        data: {
-            'slug': slug,
-        },
+$(document).ready(function() {
 
-        success: function(response) {
-            console.log("success")
-        },
-      })
-    });  
-  });
+    function updateLibrary(actionUrl, currentButton, newButtonId, newButtonText, removeClass, addClass) {
+        var slug = currentButton.attr("value");
+        console.log(slug);
+        $.ajax({
+            url: actionUrl,
+            type: 'GET',
+            data: { 'slug': slug },
+            success: function(response) {
+                if (response.status === "success") {
+                    currentButton.attr('id', newButtonId)
+                                 .text(newButtonText)
+                                 .removeClass(removeClass)
+                                 .addClass(addClass);
+                }
+            }
+        });
+    }
+
+    $(document).on('click', '#add_library', function() {
+        updateLibrary(
+            '/toonkor_collector2/add_library/',
+            $(this),
+            'remove_library',
+            'Remove from Library',
+            'btn-primary',
+            'btn-danger'
+        );
+    });
+
+    $(document).on('click', '#remove_library', function() {
+        updateLibrary(
+            '/toonkor_collector2/remove_library/',
+            $(this),
+            'add_library',
+            'Add to Library',
+            'btn-danger',
+            'btn-primary'
+        );
+    });
+
+});
