@@ -123,7 +123,7 @@ class ToonkorAPI:
         date_upload = self.to_date(element.select_one("td.episode__index").text)
 
         return {
-            "url": url,
+            "url": f"{self.base_url}/{url}",
             "index": index,
             "date_upload": date_upload
         }
@@ -190,10 +190,12 @@ class ToonkorAPI:
         return output
     
     def get_manga_details(self, slug):
-        manga_url = f"{self.base_url}/{slug}" 
+        manga_url = f"{self.base_url}/{slug}"
         response = self.client.get(manga_url, headers=self.headers)
         soup = BeautifulSoup(response.text, 'lxml')
-        return self.manga_details_parse(soup)
+        details = self.manga_details_parse(soup)
+        details["url"] = slug
+        return details
 
 
 toonkor_api = ToonkorAPI()

@@ -1,17 +1,16 @@
 from django.db import models
 
 # Create your models here.
-    
-
 class Manhwa(models.Model):
     title = models.CharField(max_length=512)
-    author = models.CharField(max_length=512)
-    chapters = models.IntegerField(default=0)
-    banner = models.ImageField(blank=True)
-    url = models.URLField()
+    author = models.CharField(max_length=512, blank=True)
+    description = models.TextField(blank=True)
+    thumbnail = models.ImageField(blank=True)
 
 
 class Chapter(models.Model):
     manhwa = models.ForeignKey(Manhwa, on_delete=models.CASCADE)
-    path = models.FilePathField()
+    index = models.IntegerField()
+    date_upload = models.DateTimeField()
+    downloaded_path = models.FilePathField()
     translated_path = models.FilePathField()

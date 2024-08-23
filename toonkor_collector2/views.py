@@ -104,15 +104,17 @@ class BrowseManhwaView(View):
     def get(self, request, manhwa_slug):
         manhwa = toonkor_api.get_manga_details(manhwa_slug)
         return render(request, 'manhwa.html', context={'manhwa':manhwa})
-    
+        
 
 class AddLibrary(View):
     def get(self, request):
         manhwa_slug = request.GET.get("slug")
-        manhwa = toonkor_api.get_manga_details(manhwa_slug)
-        Manhwa.objects.get_or_create(
-            title=manhwa["title"],
-            author=manhwa["author"],
-            
+        manhwa_dict = toonkor_api.get_manga_details(manhwa_slug)
+        manhwa, created = Manhwa.objects.get_or_create(
+            title=manhwa_dict["title"],
+            author=manhwa_dict["author"],
+            description=manhwa_dict["description"],
         )
+        manhwa.save()
+        return HttpResponse("manhwa added")
         

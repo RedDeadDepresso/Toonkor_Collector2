@@ -10,5 +10,6 @@ urlpatterns = [
     path('browse_search/', views.BrowseSearch.as_view(), name='browse_search'),
     path('browse_manhwa/<str:manhwa_slug>/', views.BrowseManhwaView.as_view(), name='browse_manhwa'),
     path('theme/', views.ThemeView.as_view(), name='theme'),
-    path('fetch_toonkor_url/', views.FetchToonkorUrl.as_view(), name='fetch_toonkor_url')
+    path('fetch_toonkor_url/', views.FetchToonkorUrl.as_view(), name='fetch_toonkor_url'),
+    path('add_library/', views.AddLibrary.as_view(), name="add_library")
 ]

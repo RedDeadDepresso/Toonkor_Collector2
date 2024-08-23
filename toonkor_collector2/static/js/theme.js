@@ -12,7 +12,6 @@ $(document).ready(function() {
         else {
             var newTheme = 'light';
         }
-        console.log(newTheme)
         $.get('/toonkor_collector2/theme/',
         {'theme': newTheme}),
         $('html').attr('data-bs-theme', newTheme); 
