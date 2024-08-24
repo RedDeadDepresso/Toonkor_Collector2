@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title_block %}
+    {{ manhwa.title }}
+{% endblock %}
+
+<!-- HEADING -->
+{% block body_block %}
+
+<div class="container">
+    <div class="card mb-3 border-0">
+        <div class="row g-0">
+          <div class="col-lg-4">
+            <img src="{{ manhwa.thumbnail_url }}" class="img-fluid rounded-start" alt="{{ manhwa.title }} thumbnail">
+          </div>
+          <div class="col-md-8">
+            <div class="card-body">
+                <h5 class="card-title">{{ manhwa.title }}</h5>
+              <p class="card-text">{{ manhwa.description }}</p>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-primary mt-5" id="remove_library" value="{{ manhwa.slug }}">
+        Add to Library
+      </button>
+
+      <div class="list-group mt-5">
+        <div class="d-flex w-100 justify-content-between">
+            <div>
+                <button id="clear_all" class="btn btn-secondary mb-3">Clear all</button>
+                <button id="select_all" class="btn btn-secondary ms-2 mb-3">Select all</button>
+            </div>
+            <div>
+                <button id="download_button" class="btn btn-secondary mb-3" data-bs-toggle="tooltip" data-bs-title="Download"><i class="bi bi-download"></i></button>
+                <button id="download_translate_button" class="btn btn-secondary ms-2 mb-3" data-bs-toggle="tooltip" data-bs-title="Download & Translate"><i class="bi bi-translate"></i></button>
+                <button class="btn btn-secondary ms-2 mb-3" data-bs-toggle="tooltip" data-bs-title="Filter"><i class="bi bi-filter"></i></button>
+            </div>
+        </div>
+          
+        {% for chapter in manhwa.chapters %}
+            <div class="d-flex">
+                <div class="form-check">
+                    <input class="form-check-input mt-3 chapter-checkbox" type="checkbox" value="{{ chapter.index }}" id="flexCheckDefault">
+                </div>                  
+                <a href="{{ chapter.url }}" class="list-group-item list-group-item-action">
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">Chapter {{ chapter.index }}</h5>
+                    <small class="">{{ chapter.date_upload|timesince }} ago</small>
+                </div>
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+
+{% endblock %}
+
+{% block script_block %}
+  <script src="{% static "js/library-manhwa.js" %}" crossorigin="anonymous"></script>
+  <script type="text/javascript">
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+    const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+  </script>
+{% endblock %}

@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    'channels',
+
     "toonkor_collector2"
 ]
 
@@ -71,6 +73,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "django_project.wsgi.application"
+ASGI_APPLICATION = 'django_project.asgi.application'
 
 
 # Database

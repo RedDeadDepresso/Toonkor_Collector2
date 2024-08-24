@@ -12,6 +12,4 @@ class Manhwa(models.Model):
 class Chapter(models.Model):
     manhwa = models.ForeignKey(Manhwa, on_delete=models.CASCADE)
     index = models.IntegerField()
-    date_upload = models.DateTimeField()
-    downloaded_path = models.FilePathField()
-    translated_path = models.FilePathField()
+    translated = models.BooleanField(default=False)

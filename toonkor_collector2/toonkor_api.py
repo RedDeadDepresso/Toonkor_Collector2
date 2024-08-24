@@ -5,6 +5,8 @@ from typing import List, Optional
 from bs4 import BeautifulSoup
 import requests
 import re
+import os
+import concurrent.futures
 
 
 class ToonkorAPI:
@@ -17,8 +19,8 @@ class ToonkorAPI:
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
         }
-
         self.base_url = self.fetch_toonkor_url()
+        self.download_queue = {}
 
     def fetch_toonkor_url(self):
         response = self.client.get(self.telegram_url, headers=self.headers)
@@ -138,16 +140,14 @@ class ToonkorAPI:
     page_list_regex = re.compile(r'src="([^"]*)"')
 
     def page_list_parse(self, document) -> List[dict]:
-        encoded = re.search(r"toon_img\s*=\s*'(.*?)'", document.text).group(1)
+        document = (str(document))
+        encoded = re.search(r"toon_img\s*=\s*'(.*?)'", document).group(1)
         if not encoded:
             raise Exception("toon_img script not found")
 
         decoded = base64.b64decode(encoded).decode('utf-8')
         return [{"index": i, "url": url if url.startswith("http") else self.base_url + url}
                 for i, url in enumerate(self.page_list_regex.findall(decoded))]
-
-    def image_url_parse(self, document) -> str:
-        raise NotImplementedError("imageUrlParse is not supported.")
 
     # Filters
 
@@ -196,6 +196,43 @@ class ToonkorAPI:
         details = self.manga_details_parse(soup)
         details["slug"] = slug
         return details
+    
+    def get_page_list(self, slug, chapter):
+        slug = slug.replace('-', '_')
+        chapter_url = f"{self.base_url}/{slug}_{chapter}화.html"
+        response = self.client.get(chapter_url, headers=self.headers)
+        soup = BeautifulSoup(response.text, 'lxml')
+        return self.page_list_parse(soup)
+    
+    def save_image(self, slug, chapter, index, img_url) -> str:
+        with requests.get(img_url, stream=True) as response:
+            _, extension = os.path.splitext(img_url)
+            img_path = os.path.abspath(f'library/{slug}/{chapter}/{index}{extension}')
+            if not os.path.exists(img_path):
+                with open(img_path, 'wb') as out_file:
+                    out_file.write(response.content)
+                    print(f"Downloaded page {index}")
+            return img_path
 
+    def download_chapter(self, slug, chapter):
+        try:
+            # Create necessary directories
+            os.makedirs(f'library/{slug}/{chapter}', exist_ok=True)
+            
+            # Get chapter details
+            page_list = self.get_page_list(slug, chapter)
 
+            # Download all pages concurrently
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                futures = [executor.submit(self.save_image, slug, chapter, page["index"], page["url"]) for page in page_list]
+                for future in concurrent.futures.as_completed(futures):
+                    future.result()
+            return True
+                    
+        except Exception as e:
+            print(f"Error downloading chapter {chapter} of {slug}: {str(e)}")
+            return False
+
+    
 toonkor_api = ToonkorAPI()
+

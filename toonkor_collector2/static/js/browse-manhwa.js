@@ -6,6 +6,7 @@ $(document).ready(function() {
         $.ajax({
             url: actionUrl,
             type: 'GET',
+            contentType: 'application/json',
             data: { 'slug': slug },
             success: function(response) {
                 if (response.status === "success") {

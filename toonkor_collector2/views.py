@@ -1,5 +1,6 @@
 import re
 import requests
+import asyncio
 
 from django.shortcuts import render
 
@@ -125,3 +126,23 @@ class RemoveLibrary(View):
         manhwa_slug = request.GET.get("slug")
         Manhwa.objects.filter(slug=manhwa_slug).delete()
         return JsonResponse({"status": "success"})
+    
+
+class LibraryManhwaView(View):
+    def get(self, request, manhwa_slug):
+        manhwa = toonkor_api.get_manga_details(manhwa_slug)
+        return render(request, 'library_manhwa.html', context={'manhwa':manhwa})
+    
+
+class DownloadChapters(View):
+    async def get(self, request, manhwa_slug):
+        chapters = request.GET.getlist('chapters')
+        for chapter in chapters:
+            await asyncio.to_thread(toonkor_api.download_chapter, manhwa_slug, chapter)
+        return JsonResponse({'status': 'Download started'})
+    
+    
+class DownloadTranslateChapters(View):
+    def get(self, request, manhwa_slug, chapters):
+        chapters = request.GET.getlist('chapters')
+        return JsonResponse({'status': 'Download started'})
