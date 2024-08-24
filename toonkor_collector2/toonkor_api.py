@@ -203,8 +203,20 @@ class ToonkorAPI:
         response = self.client.get(chapter_url, headers=self.headers)
         soup = BeautifulSoup(response.text, 'lxml')
         return self.page_list_parse(soup)
-    
-    def save_image(self, slug, chapter, index, img_url) -> str:
+        
+    def download_thumbnail(self, slug, img_url):
+        try:
+            os.makedirs(f'library/{slug}', exist_ok=True)
+            _, extension = os.path.splitext(img_url)
+            img_path = os.path.abspath(f'library/{slug}/thumbnail{extension}')
+            response = requests.get(img_url, stream=True)
+            with open(img_path, 'wb') as out_file:
+                out_file.write(response.content)
+            return img_path
+        except:
+            return None
+
+    def download_page(self, slug, chapter, index, img_url) -> str:
         with requests.get(img_url, stream=True) as response:
             _, extension = os.path.splitext(img_url)
             img_path = os.path.abspath(f'library/{slug}/{chapter}/{index}{extension}')
@@ -224,7 +236,7 @@ class ToonkorAPI:
 
             # Download all pages concurrently
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                futures = [executor.submit(self.save_image, slug, chapter, page["index"], page["url"]) for page in page_list]
+                futures = [executor.submit(self.download_page, slug, chapter, page["index"], page["url"]) for page in page_list]
                 for future in concurrent.futures.as_completed(futures):
                     future.result()
             return True

@@ -103,8 +103,11 @@ class BrowseView(View):
 
 class BrowseManhwaView(View):
     def get(self, request, manhwa_slug):
-        manhwa = toonkor_api.get_manga_details(manhwa_slug)
-        return render(request, 'manhwa.html', context={'manhwa':manhwa})
+        if Manhwa.objects.filter(slug=manhwa_slug):
+            return redirect(reverse('toonkor_collector2:library_manhwa', kwargs={'manhwa_slug': manhwa_slug}))
+        else:
+            manhwa = toonkor_api.get_manga_details(manhwa_slug)
+            return render(request, 'browse_manhwa.html', context={'manhwa':manhwa})
         
 
 class AddLibrary(View):
@@ -117,16 +120,22 @@ class AddLibrary(View):
             description=manhwa_dict["description"],
             slug=manhwa_dict["slug"]
         )
+        img_url = manhwa_dict['thumbnail_url']
+        thumbnail_path = toonkor_api.download_thumbnail(manhwa_slug, img_url)
+        print(thumbnail_path)
+        if thumbnail_path is not None:
+            manhwa.thumbnail = thumbnail_path
         manhwa.save()
-        return JsonResponse({"status": "success"})
+        redirect_url = reverse('toonkor_collector2:library_manhwa', kwargs={'manhwa_slug': manhwa_slug})
+        return JsonResponse({"status": "success", "redirect": redirect_url})
         
 
 class RemoveLibrary(View):
     def get(self, request):
         manhwa_slug = request.GET.get("slug")
         Manhwa.objects.filter(slug=manhwa_slug).delete()
-        return JsonResponse({"status": "success"})
-    
+        redirect_url = reverse('toonkor_collector2:browse_manhwa', kwargs={'manhwa_slug': manhwa_slug})
+        return JsonResponse({"status": "success", "redirect": redirect_url})    
 
 class LibraryManhwaView(View):
     def get(self, request, manhwa_slug):

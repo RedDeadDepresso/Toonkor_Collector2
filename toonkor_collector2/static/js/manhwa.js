@@ -1,4 +1,36 @@
 $(document).ready(function() {
+    $(document).on('click', '#add_library', function() {
+        var slug = $('#add_library').attr("value");
+        $.ajax({
+            url: '/toonkor_collector2/add_library/',
+            type: 'GET',
+            contentType: 'application/json',
+            data: { 'slug': slug },
+            success: function(response) {
+                if (response.status === "success") {
+                    console.log(response.redirect)
+                    window.location.replace(response.redirect);
+                }
+            }
+        })
+    });
+
+    $(document).on('click', '#remove_library', function() {
+        var slug = $('#remove_library').attr("value");
+        $.ajax({
+            url: '/toonkor_collector2/remove_library/',
+            type: 'GET',
+            contentType: 'application/json',
+            data: { 'slug': slug },
+            success: function(response) {
+                if (response.status === "success") {
+                    console.log(response.redirect)
+                    window.location.replace(response.redirect);
+                }
+            }
+        });
+    });
+
     // Handle select all checkboxes
     $(document).on('click', '#select_all', function() {
         $('.chapter-checkbox').prop('checked', true);

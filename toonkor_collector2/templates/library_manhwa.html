@@ -21,8 +21,8 @@
           </div>
         </div>
       </div>
-      <button class="btn btn-primary mt-5" id="remove_library" value="{{ manhwa.slug }}">
-        Add to Library
+      <button class="btn btn-danger mt-5" id="remove_library" value="{{ manhwa.slug }}">
+        Remove from Library
       </button>
 
       <div class="list-group mt-5">
@@ -58,7 +58,7 @@
 {% endblock %}
 
 {% block script_block %}
-  <script src="{% static "js/library-manhwa.js" %}" crossorigin="anonymous"></script>
+  <script src="{% static "js/manhwa.js" %}" crossorigin="anonymous"></script>
   <script type="text/javascript">
     const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
     const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
