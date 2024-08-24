@@ -9,18 +9,21 @@
 {% block body_block %}
 
 <div class="container">
-    {% if manhwas %}
-    <div class="row row-cols-1 row-cols-md-3 g-4">
+    {% if manhwas %}    
+    <div id="manhwa-block" class="row row-cols-1 row-cols-md-4 g-4">
         {% for manhwa in manhwas %}
         <div class="col">
-        <div class="card h-100">
-            <img src="{{ manhwa.thumbnail }}" class="card-img-top" alt="{{ manhwa.title }} thumbnail">
-            <div class="card-body">
-            <h5 class="card-title">{{ manhwa.title }}</h5>
+            <div class="card h-100">
+                <img src="{{ MEDIA_URL }}{{ manhwa.thumbnail }}" class="card-img-top" alt="{{ manhwa.title }} thumbnail">
+                <div class="card-body">
+                    <a href="{% url 'toonkor_collector2:library_manhwa' manhwa.slug %}" class="link-title stretched-link">
+                        <h5 class="card-title">{{ manhwa.title }}</h5>
+                    </a>
+                </div>
             </div>
         </div>
         {% endfor %}
-    </div>
+    </div>    
 
     {% else %}
     <div class="text-center my-5">

@@ -122,7 +122,6 @@ class AddLibrary(View):
         )
         img_url = manhwa_dict['thumbnail_url']
         thumbnail_path = toonkor_api.download_thumbnail(manhwa_slug, img_url)
-        print(thumbnail_path)
         if thumbnail_path is not None:
             manhwa.thumbnail = thumbnail_path
         manhwa.save()

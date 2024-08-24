@@ -44,9 +44,9 @@ $(document).ready(function() {
         var cardHtml = `
             <div class="col">
                 <div class="card h-100">
-                    <img src="${manhwa.thumbnail_url}" class="card-img-top" alt="${manhwa.title} banner">
+                    <img src="${manhwa.thumbnail_url}" class="card-img-top" alt="${manhwa.title} thumbnail">
                     <div class="card-body">
-                        <a href="/toonkor_collector2/browse_manhwa${manhwa.url}/" class="stretched-link">
+                        <a class="link-title stretched-link" href="/toonkor_collector2/browse_manhwa${manhwa.url}/">
                         <h5 class="card-title">${manhwa.title}</h5>
                         </a>
                     </div>

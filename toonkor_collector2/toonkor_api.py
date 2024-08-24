@@ -206,13 +206,13 @@ class ToonkorAPI:
         
     def download_thumbnail(self, slug, img_url):
         try:
-            os.makedirs(f'library/{slug}', exist_ok=True)
+            os.makedirs(f'toonkor_collector2/media/{slug}', exist_ok=True)
             _, extension = os.path.splitext(img_url)
-            img_path = os.path.abspath(f'library/{slug}/thumbnail{extension}')
+            img_path = f'toonkor_collector2/media/{slug}/thumbnail{extension}'
             response = requests.get(img_url, stream=True)
             with open(img_path, 'wb') as out_file:
                 out_file.write(response.content)
-            return img_path
+            return f'{slug}/thumbnail{extension}'
         except:
             return None
 
