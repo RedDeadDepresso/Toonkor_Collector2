@@ -1,24 +1,13 @@
 import re
 import requests
-import asyncio
 
-from django.shortcuts import render
-
-# Create your views here.
-from django.core.paginator import Paginator
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
-from django.db.models import Model
-from django.http import HttpResponse, JsonResponse
+from channels.layers import get_channel_layer
 
 from django.shortcuts import redirect, render
-from django.template.defaultfilters import slugify
-from django.utils.decorators import method_decorator
+from django.http import HttpResponse, JsonResponse
 from django.urls import reverse
 from django.views import View
 
-from channels.layers import get_channel_layer
-from toonkor_collector2.consumers import ProgressConsumer
 from toonkor_collector2.toonkor_api import toonkor_api
 from toonkor_collector2.models import Manhwa, Chapter
 
@@ -143,34 +132,3 @@ class LibraryManhwaView(View):
     def get(self, request, manhwa_slug):
         manhwa = toonkor_api.get_manga_details(manhwa_slug)
         return render(request, 'library_manhwa.html', context={'manhwa':manhwa})
-    
-
-class DownloadChapters(View):
-    async def get(self, request, manhwa_slug):
-        channel_layer = get_channel_layer()
-        chapters = request.GET.getlist('chapters')
-        progress = {
-            'current': 0,
-            'total': len(chapters)
-        }
-
-        for chapter in chapters:
-            result = await asyncio.to_thread(toonkor_api.download_chapter, manhwa_slug, chapter)
-            if result:
-                progress['current'] += 1
-                await channel_layer.group_send(
-                    'progress_updates',
-                    {
-                        'type': 'send_progress',
-                        'current_chapter': chapter,
-                        'progress': progress
-                    }
-                )
-
-        return JsonResponse({'status': 'Download started'})
-    
-    
-class DownloadTranslateChapters(View):
-    def get(self, request, manhwa_slug, chapters):
-        chapters = request.GET.getlist('chapters')
-        return JsonResponse({'status': 'Download started'})

@@ -12,13 +12,14 @@ from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
 from django.urls import re_path
-from toonkor_collector2.consumers import ProgressConsumer
+from toonkor_collector2.consumers import DownloadConsumer, TranslateConsumer
 
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_project.settings")
 
 websocket_urlpatterns = [
-    re_path(r'ws/progress/', ProgressConsumer.as_asgi()),
+    re_path(r'ws/download/', DownloadConsumer.as_asgi()),
+    re_path(r'ws/translate/', TranslateConsumer.as_asgi()),
 ]
 
 application = ProtocolTypeRouter({

@@ -51,25 +51,17 @@ $(document).ready(function() {
         $('.chapter-checkbox:checked').each(function() {
             chapters.push($(this).val());
         });
-        console.log(chapters);
 
-        // Send AJAX request to download the selected chapters
-        $.ajax({
-            url: '/toonkor_collector2/download/' + slug,
-            method: 'GET',
-            data: {'chapters': chapters},
-            traditional: true, // ensures array is serialized as `chapters[]=value1&chapters[]=value2`
-            success: function(response) {
-                console.log(response.status);
-            },
-            error: function(error) {
-                console.error("Error starting download:", error);
-            }
-        });
-
-        const progressSocket = new WebSocket('ws://' + window.location.host + '/ws/progress/');
-
-        progressSocket.onmessage = function(e) {
+        const downloadSocket = new WebSocket('ws://' + window.location.host + '/ws/download/');
+        
+        downloadSocket.onopen = function() {
+            // Send data when WebSocket connection is open
+            downloadSocket.send(JSON.stringify(
+                { slug: slug, chapters: chapters }
+            ));
+        };
+    
+        downloadSocket.onmessage = function(e) {
             var data = JSON.parse(e.data);
             var progress = Math.floor(data.current / data.total * 100);
             $('.progress-block').css('display', 'block');
@@ -78,14 +70,23 @@ $(document).ready(function() {
             $('#progress-text').text(`${data.current}/${data.total}`);
             if (progress === 100) {
                 $('#progress-status').text('Status: Download Completed');
+                downloadSocket.close(); // Close the WebSocket when download is complete
             }
             else {
                 $('#progress-status').text('Status: Downloading');
             }
         };
-        
-        progressSocket.onclose = function(e) {
-            console.error('WebSocket closed unexpectedly');
+    
+        downloadSocket.onerror = function(e) {
+            console.error('WebSocket error:', e);
         };
-    });
+    
+        downloadSocket.onclose = function(e) {
+            if (e.wasClean) {
+                console.log('WebSocket closed cleanly');
+            } else {
+                console.error('WebSocket closed unexpectedly:', e);
+            }
+        };
+    })
 });
