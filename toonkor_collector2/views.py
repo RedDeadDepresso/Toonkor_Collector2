@@ -17,6 +17,8 @@ from django.utils.decorators import method_decorator
 from django.urls import reverse
 from django.views import View
 
+from channels.layers import get_channel_layer
+from toonkor_collector2.consumers import ProgressConsumer
 from toonkor_collector2.toonkor_api import toonkor_api
 from toonkor_collector2.models import Manhwa, Chapter
 
@@ -136,6 +138,7 @@ class RemoveLibrary(View):
         redirect_url = reverse('toonkor_collector2:browse_manhwa', kwargs={'manhwa_slug': manhwa_slug})
         return JsonResponse({"status": "success", "redirect": redirect_url})    
 
+
 class LibraryManhwaView(View):
     def get(self, request, manhwa_slug):
         manhwa = toonkor_api.get_manga_details(manhwa_slug)
@@ -144,9 +147,26 @@ class LibraryManhwaView(View):
 
 class DownloadChapters(View):
     async def get(self, request, manhwa_slug):
+        channel_layer = get_channel_layer()
         chapters = request.GET.getlist('chapters')
+        progress = {
+            'current': 0,
+            'total': len(chapters)
+        }
+
         for chapter in chapters:
-            await asyncio.to_thread(toonkor_api.download_chapter, manhwa_slug, chapter)
+            result = await asyncio.to_thread(toonkor_api.download_chapter, manhwa_slug, chapter)
+            if result:
+                progress['current'] += 1
+                await channel_layer.group_send(
+                    'progress_updates',
+                    {
+                        'type': 'send_progress',
+                        'current_chapter': chapter,
+                        'progress': progress
+                    }
+                )
+
         return JsonResponse({'status': 'Download started'})
     
     

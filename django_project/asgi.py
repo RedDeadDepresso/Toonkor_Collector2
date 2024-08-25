@@ -18,7 +18,7 @@ from toonkor_collector2.consumers import ProgressConsumer
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_project.settings")
 
 websocket_urlpatterns = [
-    re_path(r'ws/progress/$', ProgressConsumer.as_asgi()),
+    re_path(r'ws/progress/', ProgressConsumer.as_asgi()),
 ]
 
 application = ProtocolTypeRouter({

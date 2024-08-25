@@ -2,3 +2,7 @@ a.link-title {
     color: inherit;
     text-decoration: none; 
 }
+
+.progress-block {
+    display: none;
+}

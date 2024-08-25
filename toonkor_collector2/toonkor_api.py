@@ -219,7 +219,7 @@ class ToonkorAPI:
     def download_page(self, slug, chapter, index, img_url) -> str:
         with requests.get(img_url, stream=True) as response:
             _, extension = os.path.splitext(img_url)
-            img_path = os.path.abspath(f'library/{slug}/{chapter}/{index}{extension}')
+            img_path = os.path.abspath(f'toonkor_collector2/media/{slug}/{chapter}/{index}{extension}')
             if not os.path.exists(img_path):
                 with open(img_path, 'wb') as out_file:
                     out_file.write(response.content)
@@ -229,7 +229,7 @@ class ToonkorAPI:
     def download_chapter(self, slug, chapter):
         try:
             # Create necessary directories
-            os.makedirs(f'library/{slug}/{chapter}', exist_ok=True)
+            os.makedirs(f'toonkor_collector2/media/{slug}/{chapter}', exist_ok=True)
             
             # Get chapter details
             page_list = self.get_page_list(slug, chapter)

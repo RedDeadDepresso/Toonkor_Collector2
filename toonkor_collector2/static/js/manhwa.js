@@ -66,5 +66,26 @@ $(document).ready(function() {
                 console.error("Error starting download:", error);
             }
         });
+
+        const progressSocket = new WebSocket('ws://' + window.location.host + '/ws/progress/');
+
+        progressSocket.onmessage = function(e) {
+            var data = JSON.parse(e.data);
+            var progress = Math.floor(data.current / data.total * 100);
+            $('.progress-block').css('display', 'block');
+            $('.progress-bar').css('width', progress + '%');
+            $('.progress-bar').text(progress + '%');
+            $('#progress-text').text(`${data.current}/${data.total}`);
+            if (progress === 100) {
+                $('#progress-status').text('Status: Download Completed');
+            }
+            else {
+                $('#progress-status').text('Status: Downloading');
+            }
+        };
+        
+        progressSocket.onclose = function(e) {
+            console.error('WebSocket closed unexpectedly');
+        };
     });
 });
