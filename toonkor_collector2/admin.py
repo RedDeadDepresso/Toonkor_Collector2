@@ -3,5 +3,5 @@ from toonkor_collector2.models import Manhwa, Chapter
 # Register your models here.
 
 
-admin.register(Manhwa)
-admin.register(Chapter)
+admin.site.register(Manhwa)
+admin.site.register(Chapter)
