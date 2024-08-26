@@ -232,17 +232,18 @@ class ToonkorAPI:
             
             # Get chapter details
             page_list = self.get_page_list(slug, chapter)
+            pages_path = set()
 
             # Download all pages concurrently
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 futures = [executor.submit(self.download_page, slug, chapter, page["index"], page["url"]) for page in page_list]
                 for future in concurrent.futures.as_completed(futures):
-                    future.result()
-            return True
+                    pages_path.add(future.result())
+            return list(pages_path)
                     
         except Exception as e:
             print(f"Error downloading chapter {chapter} of {slug}: {str(e)}")
-            return False
+            return None
 
     
 toonkor_api = ToonkorAPI()

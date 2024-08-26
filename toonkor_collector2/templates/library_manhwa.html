@@ -34,12 +34,20 @@
         </a>
       </div>
 
-      <div class="progress-block">
-        <p id="progress-status"></p>
+      <div id="download-block" class="progress-block">
+        <p id="download-status"></p>
         <div class="progress" role="progressbar">
-          <div class="progress-bar" style="width: 0%">0%</div>
+          <div id="download-bar" class="progress-bar" style="width: 0%">0%</div>
         </div>
-        <p id="progress-text" class="text-end text-muted">0/0</p>
+        <p id="download-counter" class="text-end text-muted">0/0</p>
+      </div>
+
+      <div id="translate-block" class="progress-block">
+        <p id="translate-status"></p>
+        <div class="progress" role="progressbar">
+          <div id="translate-bar" class="progress-bar" style="width: 0%">0%</div>
+        </div>
+        <p id="translate-counter" class="text-end text-muted">0/0</p>
       </div>
 
       <div class="list-group mt-5">

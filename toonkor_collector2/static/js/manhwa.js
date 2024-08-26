@@ -51,29 +51,28 @@ $(document).ready(function() {
         $('.chapter-checkbox:checked').each(function() {
             chapters.push($(this).val());
         });
-
-        const downloadSocket = new WebSocket('ws://' + window.location.host + '/ws/download/');
+        const downloadSocket = new WebSocket('ws://' + window.location.host + '/ws/download_translate/' + slug + '/');
         
         downloadSocket.onopen = function() {
             // Send data when WebSocket connection is open
             downloadSocket.send(JSON.stringify(
-                { slug: slug, chapters: chapters }
+                { slug: slug, chapters: chapters, task: 'download' }
             ));
         };
     
         downloadSocket.onmessage = function(e) {
-            var data = JSON.parse(e.data);
+            var data = JSON.parse(e.data).progress;
             var progress = Math.floor(data.current / data.total * 100);
-            $('.progress-block').css('display', 'block');
-            $('.progress-bar').css('width', progress + '%');
-            $('.progress-bar').text(progress + '%');
-            $('#progress-text').text(`${data.current}/${data.total}`);
+            $('#download-block').css('display', 'block');
+            $('#download-bar').css('width', progress + '%');
+            $('#download-bar').text(progress + '%');
+            $('#download-counter').text(`${data.current}/${data.total}`);
             if (progress === 100) {
-                $('#progress-status').text('Status: Download Completed');
-                downloadSocket.close(); // Close the WebSocket when download is complete
+                $('#download-status').text('Status: Download Completed');
             }
             else {
-                $('#progress-status').text('Status: Downloading');
+                $('#download-status').text('Status: Downloading');
+                downloadSocket.close(); // Close the WebSocket when download is complete
             }
         };
     
@@ -89,4 +88,66 @@ $(document).ready(function() {
             }
         };
     })
-});
+
+    // Handle download button click
+    $(document).on('click', '#download_translate_button', function() {
+        // Get the value of the slug
+        var slug = $('#remove_library').val();
+        var chapters = [];
+        
+        // Collect all checked checkboxes
+        $('.chapter-checkbox:checked').each(function() {
+            chapters.push($(this).val());
+        });
+        const downloadSocket = new WebSocket('ws://' + window.location.host + '/ws/download_translate/' + slug);
+        
+        downloadSocket.onopen = function() {
+            // Send data when WebSocket connection is open
+            downloadSocket.send(JSON.stringify(
+                { slug: slug, chapters: chapters, task: 'download_translate' }
+            ));
+        };
+    
+        downloadSocket.onmessage = function(e) {
+            var data = JSON.parse(e.data).progress;
+            var progress = Math.floor(data.current / data.total * 100);
+            if (data.task === 'download') {
+                $('#download-block').css('display', 'block');
+                $('#download-bar').css('width', progress + '%');
+                $('#download-bar').text(progress + '%');
+                $('#download-counter').text(`${data.current}/${data.total}`);
+                if (progress === 100) {
+                    $('#download-status').text('Status: Download Completed');
+                }
+                else {
+                    $('#download-status').text('Status: Downloading');
+                }
+            }
+            else {
+                $('#translate-block').css('display', 'block');
+                $('#translate-bar').css('width', progress + '%');
+                $('#translate-bar').text(progress + '%');
+                $('#translate-counter').text(`${data.current}/${data.total}`);
+                if (progress === 100) {
+                    $('#translate-status').text('Status: Translation Completed');
+                    downloadSocket.close(); // Close the WebSocket when download is complete
+                }
+                else {
+                    $('#translate-status').text('Status: Translating')
+                }
+            }
+        }
+    
+        downloadSocket.onerror = function(e) {
+            console.error('WebSocket error:', e);
+        };
+    
+        downloadSocket.onclose = function(e) {
+            if (e.wasClean) {
+                console.log('WebSocket closed cleanly');
+            } else {
+                console.error('WebSocket closed unexpectedly:', e);
+            }
+        };
+    }
+)})
