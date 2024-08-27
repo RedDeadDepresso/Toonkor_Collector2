@@ -222,7 +222,6 @@ class ToonkorAPI:
             if not os.path.exists(img_path):
                 with open(img_path, 'wb') as out_file:
                     out_file.write(response.content)
-                    print(f"Downloaded page {index}")
             return img_path
 
     def download_chapter(self, slug, chapter):

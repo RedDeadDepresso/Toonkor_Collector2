@@ -99,7 +99,7 @@ $(document).ready(function() {
         $('.chapter-checkbox:checked').each(function() {
             chapters.push($(this).val());
         });
-        const downloadSocket = new WebSocket('ws://' + window.location.host + '/ws/download_translate/' + slug);
+        const downloadSocket = new WebSocket('ws://' + window.location.host + '/ws/download_translate/' + slug + '/');
         
         downloadSocket.onopen = function() {
             // Send data when WebSocket connection is open
@@ -109,13 +109,13 @@ $(document).ready(function() {
         };
     
         downloadSocket.onmessage = function(e) {
-            var data = JSON.parse(e.data).progress;
-            var progress = Math.floor(data.current / data.total * 100);
+            var data = JSON.parse(e.data);
+            var progress = Math.floor(data.progress.current / data.progress.total * 100);
             if (data.task === 'download') {
                 $('#download-block').css('display', 'block');
                 $('#download-bar').css('width', progress + '%');
                 $('#download-bar').text(progress + '%');
-                $('#download-counter').text(`${data.current}/${data.total}`);
+                $('#download-counter').text(`${data.progress.current}/${data.progress.total}`);
                 if (progress === 100) {
                     $('#download-status').text('Status: Download Completed');
                 }
@@ -123,7 +123,7 @@ $(document).ready(function() {
                     $('#download-status').text('Status: Downloading');
                 }
             }
-            else {
+            else if (data.task === 'download_translate') {
                 $('#translate-block').css('display', 'block');
                 $('#translate-bar').css('width', progress + '%');
                 $('#translate-bar').text(progress + '%');

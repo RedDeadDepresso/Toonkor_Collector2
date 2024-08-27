@@ -1,8 +1,6 @@
 import asyncio
 import base64
-import comic_django
 import json
-import multiprocessing
 
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -26,17 +24,6 @@ class QtConsumer(AsyncWebsocketConsumer):
     Attributes:
         COMIC_TRANSLATE_PROC (multiprocessing.Process): A process to run the comic_django GUI.
     """
-    COMIC_TRANSLATE_PROC: multiprocessing.Process = None
-
-    def start_proc(self):
-        """
-        Starts the comic_django GUI in a separate process if it is not already running.
-        The process is set as a daemon to terminate with the main program.
-        """
-        if self.COMIC_TRANSLATE_PROC is None:
-            self.COMIC_TRANSLATE_PROC = multiprocessing.Process(target=comic_django.init_gui)
-            self.COMIC_TRANSLATE_PROC.daemon = True
-            self.COMIC_TRANSLATE_PROC.start()
 
     async def connect(self):
         """
@@ -45,7 +32,6 @@ class QtConsumer(AsyncWebsocketConsumer):
         """
         self.group_name = 'qt'
         await self.channel_layer.group_add(self.group_name, self.channel_name)
-        await sync_to_async(self.start_proc)()
         await self.accept()
 
     async def send_translation_request(self, event):
@@ -56,7 +42,7 @@ class QtConsumer(AsyncWebsocketConsumer):
             event (dict): The event data containing the text_data to be sent.
         """
         to_translate = event['to_translate']
-        await self.send(to_translate)
+        await self.send(json.dumps(to_translate))
 
     async def receive(self, text_data):
         """
