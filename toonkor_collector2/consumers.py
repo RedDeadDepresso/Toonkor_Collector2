@@ -1,5 +1,4 @@
 import asyncio
-import base64
 import json
 
 from asgiref.sync import sync_to_async
@@ -7,13 +6,6 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from toonkor_collector2.models import Manhwa, Chapter
 from toonkor_collector2.toonkor_api import toonkor_api
 
-
-def encode_name(name):
-    return base64.urlsafe_b64encode(name.encode()).decode().rstrip("=")
-
-def decode_name(encoded_name):
-    padded_encoded_name = encoded_name + "=" * (4 - len(encoded_name) % 4)
-    return base64.urlsafe_b64decode(padded_encoded_name).decode()
 
 class QtConsumer(AsyncWebsocketConsumer):
     """
@@ -62,7 +54,7 @@ class QtConsumer(AsyncWebsocketConsumer):
         await sync_to_async(chapter_obj.save)()
 
         await self.channel_layer.group_send(
-            f'download_translate_{encode_name(manhwa_slug)}',
+            f'download_translate_{toonkor_api.encode_name(manhwa_slug)}',
             {
                 'type': 'send_progress',
                 'event': data
@@ -104,7 +96,7 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
         and accepts the WebSocket connection.
         """
         self.manhwa_name = self.scope['url_route']['kwargs']['manhwa_slug']
-        self.group_name = f'download_translate_{encode_name(self.manhwa_name)}'
+        self.group_name = f'download_translate_{toonkor_api.encode_name(self.manhwa_name)}'
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
 
@@ -155,7 +147,7 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
         try:
             manhwa_obj = await sync_to_async(Manhwa.objects.get)(slug=manhwa_slug)
             for chapter in chapters:
-                pages_path = await asyncio.to_thread(toonkor_api.download_chapter, manhwa_slug, chapter)
+                pages_path = await asyncio.to_thread(toonkor_api.download_chapter, manhwa_obj, chapter)
                 if pages_path is not None:
                     progress['current'] += 1
                     chapter_obj, created = await sync_to_async(Chapter.objects.get_or_create)(

@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load tags %}
 
 {% block title_block %}
     Library
@@ -14,10 +15,10 @@
         {% for manhwa in manhwas %}
         <div class="col">
             <div class="card h-100">
-                <img src="{{ MEDIA_URL }}{{ manhwa.thumbnail }}" class="card-img-top" alt="{{ manhwa.title }} thumbnail">
+                <img src="{{ MEDIA_URL }}{{ manhwa.thumbnail }}" class="card-img-top" alt="{% display_title manhwa %} thumbnail">
                 <div class="card-body">
                     <a href="{% url 'toonkor_collector2:library_manhwa' manhwa.slug %}" class="link-title stretched-link">
-                        <h5 class="card-title">{{ manhwa.title }}</h5>
+                        <h5 class="card-title">{% display_title manhwa %}</h5>
                     </a>
                 </div>
             </div>

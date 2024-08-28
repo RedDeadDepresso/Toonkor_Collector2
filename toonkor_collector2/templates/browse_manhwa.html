@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load tags %}
 
 {% block title_block %}
     {{ manhwa.title }}
@@ -12,12 +13,12 @@
     <div class="card mb-3 border-0">
         <div class="row g-0">
           <div class="col-lg-4">
-            <img src="{{ manhwa.thumbnail_url }}" class="img-fluid rounded-start" alt="{{ manhwa.title }} thumbnail">
+            <img src="{{ manhwa.thumbnail_url }}" class="img-fluid rounded-start" alt="{% display_title manhwa %} thumbnail">
           </div>
           <div class="col-md-8">
             <div class="card-body">
-                <h5 class="card-title">{{ manhwa.title }}</h5>
-              <p class="card-text">{{ manhwa.description }}</p>
+                <h5 class="card-title">{% display_title manhwa %}</h5>
+              <p class="card-text">{% display_description manhwa %}</p>
           </div>
         </div>
       </div>

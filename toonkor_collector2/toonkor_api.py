@@ -11,15 +11,19 @@ import concurrent.futures
 
 class ToonkorAPI:
     def __init__(self):
-        self.name = "Toonkor"
-        self.lang = "ko"
         self.telegram_url = "https://t.me/s/new_toonkor"
-        self.supports_latest = True
         self.client = requests.Session()
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
         }
-        self.base_url = self.fetch_toonkor_url()
+        self.base_url = "https://toonkor431.com/"
+
+    def encode_name(self, name):
+        return base64.urlsafe_b64encode(name.encode()).decode().rstrip("=")
+
+    def decode_name(self, encoded_name):
+        padded_encoded_name = encoded_name + "=" * (4 - len(encoded_name) % 4)
+        return base64.urlsafe_b64decode(padded_encoded_name).decode()
 
     def fetch_toonkor_url(self):
         response = self.client.get(self.telegram_url, headers=self.headers)
@@ -188,6 +192,35 @@ class ToonkorAPI:
         
         return output
     
+    def update_mangadex_search(self, mangadex_search):
+        filters = {
+            "type": "/%EB%8B%A8%ED%96%89%EB%B3%B8",  # Optional: specify type (e.g., "Manga")
+            "sort": "?fil=%EC%B5%9C%EC%8B%A0"       # Optional: specify sorting (e.g., "Latest")
+        }
+        search_url = self.search_manga_request(1, mangadex_search["title"], filters)
+        response = self.client.get(search_url, headers=self.headers)
+        if response.status_code != 200:
+            return None
+        
+        soup = BeautifulSoup(response.text, 'lxml')
+        for element in soup.select(self.search_manga_selector()):
+            manga = self.search_manga_from_element(element)
+            if not manga:
+                return None
+            else:
+                mangadex_search.update(manga)
+                return mangadex_search
+    
+    def multi_update_mangadex_search(self, mangadex_results):
+        output = {"results": []}
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [executor.submit(self.update_mangadex_search, mangadex_search) for mangadex_search in mangadex_results["results"]]
+            for future in concurrent.futures.as_completed(futures):
+                result = future.result()
+                if result is not None:
+                    output["results"].append(result)
+        return output
+
     def get_manga_details(self, slug):
         manga_url = f"{self.base_url}/{slug}"
         response = self.client.get(manga_url, headers=self.headers)
@@ -203,45 +236,44 @@ class ToonkorAPI:
         soup = BeautifulSoup(response.text, 'lxml')
         return self.page_list_parse(soup)
         
-    def download_thumbnail(self, slug, img_url):
+    def download_thumbnail(self, manhwa, img_url):
         try:
-            os.makedirs(f'toonkor_collector2/media/{slug}', exist_ok=True)
+            os.makedirs(manhwa.path, exist_ok=True)
             _, extension = os.path.splitext(img_url)
-            img_path = f'toonkor_collector2/media/{slug}/thumbnail{extension}'
+            img_path = f'{manhwa.path}/thumbnail{extension}'
             response = requests.get(img_url, stream=True)
             with open(img_path, 'wb') as out_file:
                 out_file.write(response.content)
-            return f'{slug}/thumbnail{extension}'
+            return os.path.basename(manhwa.path) + f'/thumbnail{extension}'
         except:
             return None
 
-    def download_page(self, slug, chapter, index, img_url) -> str:
+    def download_page(self, manhwa, chapter, index, img_url) -> str:
         with requests.get(img_url, stream=True) as response:
             _, extension = os.path.splitext(img_url)
-            img_path = os.path.abspath(f'toonkor_collector2/media/{slug}/{chapter}/{index}{extension}')
+            img_path = os.path.abspath(f'{manhwa.path}/{chapter}/{index}{extension}')
             if not os.path.exists(img_path):
                 with open(img_path, 'wb') as out_file:
                     out_file.write(response.content)
             return img_path
 
-    def download_chapter(self, slug, chapter):
+    def download_chapter(self, manhwa, chapter):
         try:
             # Create necessary directories
-            os.makedirs(f'toonkor_collector2/media/{slug}/{chapter}', exist_ok=True)
+            os.makedirs(f'{manhwa.path}/{chapter}', exist_ok=True)
             
             # Get chapter details
-            page_list = self.get_page_list(slug, chapter)
-            pages_path = set()
-
+            page_list = self.get_page_list(manhwa.slug, chapter)
+            
             # Download all pages concurrently
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                futures = [executor.submit(self.download_page, slug, chapter, page["index"], page["url"]) for page in page_list]
-                for future in concurrent.futures.as_completed(futures):
-                    pages_path.add(future.result())
+                futures = [executor.submit(self.download_page, manhwa, chapter, page["index"], page["url"]) for page in page_list]
+                pages_path = {future.result() for future in concurrent.futures.as_completed(futures)}
+            
             return list(pages_path)
                     
         except Exception as e:
-            print(f"Error downloading chapter {chapter} of {slug}: {str(e)}")
+            print(f"Error downloading chapter {chapter} of {manhwa.slug}: {str(e)}")
             return None
 
     

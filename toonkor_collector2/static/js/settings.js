@@ -1,5 +1,4 @@
 $(document).ready(function() { 
-
     var theme = $('html').attr('data-bs-theme');
     if (theme == 'dark') {
         $("#theme-switch").prop("checked", true);

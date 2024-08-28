@@ -31,14 +31,31 @@ $(document).ready(function() {
         $('#text-block').text(string);
     }
 
+    function getCookie(cname) {
+        let name = cname + "=";
+        let decodedCookie = decodeURIComponent(document.cookie);
+        let ca = decodedCookie.split(';');
+        for(let i = 0; i <ca.length; i++) {
+          let c = ca[i];
+          while (c.charAt(0) == ' ') {
+            c = c.substring(1);
+          }
+          if (c.indexOf(name) == 0) {
+            return c.substring(name.length, c.length);
+          }
+        }
+        return "";
+      }
+
     function generateCard(manhwa) {
+        var title = getCookie('display_english') === "true" ? manhwa.en_title : manhwa.title;
         var cardHtml = `
             <div class="col">
                 <div class="card h-100">
-                    <img src="${manhwa.thumbnail_url}" class="card-img-top" alt="${manhwa.title} thumbnail">
+                    <img src="${manhwa.thumbnail_url}" class="card-img-top" alt="${title} thumbnail">
                     <div class="card-body">
                         <a class="link-title stretched-link" href="/toonkor_collector2/browse_manhwa${manhwa.url}/">
-                        <h5 class="card-title">${manhwa.title}</h5>
+                        <h5 class="card-title">${title}</h5>
                         </a>
                     </div>
                 </div>
