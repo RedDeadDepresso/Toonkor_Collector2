@@ -57,18 +57,10 @@ class QtConsumer(AsyncWebsocketConsumer):
             f'download_translate_{toonkor_api.encode_name(manhwa_slug)}',
             {
                 'type': 'send_progress',
-                'event': data
+                'task': data['task'],
+                'progress': data['progress'],
             }
         )
-
-    async def send_progress(self, event):
-        """
-        Sends progress updates to the WebSocket client.
-
-        Args:
-            event (dict): The event data containing progress information.
-        """
-        await self.send(text_data=json.dumps(event['event']))
 
     async def disconnect(self, close_code):
         """

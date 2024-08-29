@@ -118,16 +118,16 @@ $(document).ready(function() {
                 $('#download-counter').text(`${data.progress.current}/${data.progress.total}`);
                 if (progress === 100) {
                     $('#download-status').text('Status: Download Completed');
+                    $('#translate-block').css('display', 'block');
                 }
                 else {
                     $('#download-status').text('Status: Downloading');
                 }
             }
             else if (data.task === 'download_translate') {
-                $('#translate-block').css('display', 'block');
                 $('#translate-bar').css('width', progress + '%');
                 $('#translate-bar').text(progress + '%');
-                $('#translate-counter').text(`${data.current}/${data.total}`);
+                $('#translate-counter').text(`${data.progress.current}/${data.progress.total}`);
                 if (progress === 100) {
                     $('#translate-status').text('Status: Translation Completed');
                     downloadSocket.close(); // Close the WebSocket when download is complete
