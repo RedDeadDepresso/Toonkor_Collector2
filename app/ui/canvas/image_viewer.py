@@ -2,7 +2,12 @@
 from PySide6 import QtWidgets
 from PySide6 import QtCore, QtGui
 
-import cv2
+from PySide6.QtGui import QFont, QFontDatabase
+
+from .text_item import TextBlockItem
+from .rectangle import MovableRectItem
+
+import cv2, os
 import numpy as np
 import math
 from typing import List, Dict
@@ -10,7 +15,6 @@ from typing import List, Dict
 class ImageViewer(QtWidgets.QGraphicsView):
     rectangle_created = QtCore.Signal(QtCore.QRectF)
     rectangle_selected = QtCore.Signal(QtCore.QRectF)
-    rectangle_changed = QtCore.Signal(QtCore.QRectF)
     rectangle_deleted = QtCore.Signal(QtCore.QRectF)
 
     def __init__(self, parent):
@@ -36,6 +40,7 @@ class ImageViewer(QtWidgets.QGraphicsView):
         self._start_point = None
         self._current_rect = None
         self._rectangles = []
+        self._text_items = []
         self._selected_rect = None
         self._drag_start = None
         self._drag_offset = None
@@ -57,7 +62,7 @@ class ImageViewer(QtWidgets.QGraphicsView):
 
         self._current_path = None
         self._current_path_item = None
-   
+
         # Initialize last pan position
         self._last_pan_pos = QtCore.QPoint()
 
@@ -149,7 +154,6 @@ class ImageViewer(QtWidgets.QGraphicsView):
             self.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
         elif tool in ['brush', 'eraser']:
             self.setDragMode(QtWidgets.QGraphicsView.NoDrag)
-            #self.setCursor(QtCore.Qt.CursorShape.CrossCursor)
             if tool == 'brush':
                 self.setCursor(self._brush_cursor)
             else:
@@ -165,6 +169,15 @@ class ImageViewer(QtWidgets.QGraphicsView):
             self._selected_rect = None
 
     def mousePressEvent(self, event):
+
+        clicked_item = self.itemAt(event.pos())
+
+        for item in self._scene.items():
+            if isinstance(item, TextBlockItem) and item != clicked_item:
+                item.handleDeselection()
+
+        if self._current_tool == 'pan' or isinstance(clicked_item, TextBlockItem):
+            super().mousePressEvent(event)
 
         if event.button() == QtCore.Qt.MiddleButton:
             self._panning = True
@@ -189,30 +202,19 @@ class ImageViewer(QtWidgets.QGraphicsView):
             scene_pos = self.mapToScene(event.position().toPoint())
             if self._photo.contains(scene_pos):
                 item = self.itemAt(event.position().toPoint())
-                if isinstance(item, QtWidgets.QGraphicsRectItem) and item != self._photo:
+                if isinstance(item, MovableRectItem):
                     self.select_rectangle(item)
-                    handle = self.get_resize_handle(item, scene_pos)
-                    if handle:
-                        self._resize_handle = handle
-                        self._resize_start = scene_pos
-                    else:
-                        self._dragging = True
-                        self._drag_start = scene_pos
-                        self._drag_offset = scene_pos - item.rect().topLeft()
+                    super().mousePressEvent(event)
                 else:
                     self.deselect_all()
                     self._box_mode = True
                     self._start_point = scene_pos
-                    self._current_rect = QtWidgets.QGraphicsRectItem(self._photo.mapRectToItem(self._photo, QtCore.QRectF(self._start_point, self._start_point)))
-                    self._current_rect.setBrush(QtGui.QBrush(QtGui.QColor(255, 192, 203, 125)))  # Transparent pink
-                    self._scene.addItem(self._current_rect)
-
-        elif self._current_tool == 'pan':
-            super().mousePressEvent(event)
+                    self._current_rect = MovableRectItem(QtCore.QRectF(scene_pos, scene_pos), self._photo)
+                    self._current_rect.setZValue(1)
 
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
-    
+
         if self._panning:
             new_pos = event.position()
             delta = new_pos - self._pan_start_pos
@@ -231,35 +233,19 @@ class ImageViewer(QtWidgets.QGraphicsView):
                 elif self._current_tool == 'eraser':
                     self.erase_at(scene_pos)
 
+
         if self._current_tool == 'box':
             scene_pos = self.mapToScene(event.position().toPoint())
             if self._box_mode:
                 end_point = self.constrain_point(scene_pos)
                 rect = QtCore.QRectF(self._start_point, end_point).normalized()
-                self._current_rect.setRect(self._photo.mapRectToItem(self._photo, rect))
-            elif self._selected_rect:
-                if self._resize_handle:
-                    self.resize_rectangle(scene_pos)
-                elif self._dragging:
-                    self.move_rectangle(scene_pos)
-                else:
-                    cursor = self.get_cursor(self._selected_rect, scene_pos)
-                    self.viewport().setCursor(cursor)
-            else:
-                cursor = self.get_cursor_for_box_tool(scene_pos)
-                self.viewport().setCursor(cursor)
-
-    def move_rectangle(self, scene_pos: QtCore.QPointF):
-        new_pos = scene_pos
-        new_top_left = new_pos - self._drag_offset
-        new_rect = QtCore.QRectF(new_top_left, self._selected_rect.rect().size())
-        constrained_rect = self.constrain_rect(new_rect)
-        self._selected_rect.setRect(constrained_rect)
-        
-        # Emit the rectangle_moved signal
-        self.rectangle_changed.emit(constrained_rect)
+                self._current_rect.setRect(rect)
 
     def mouseReleaseEvent(self, event):
+        item = self.itemAt(event.pos())
+        if self._current_tool == 'pan' or isinstance(item, TextBlockItem):
+            super().mouseReleaseEvent(event)
+
         if event.button() == QtCore.Qt.MouseButton.MiddleButton:
             self._panning = False
             self.viewport().setCursor(QtCore.Qt.CursorShape.ArrowCursor)
@@ -284,13 +270,6 @@ class ImageViewer(QtWidgets.QGraphicsView):
                 else:
                     self._scene.removeItem(self._current_rect)
                 self._current_rect = None
-            else:
-                self._dragging = False
-                self._drag_offset = None
-                self._resize_handle = None
-                self._resize_start = None
-
-        elif self._current_tool == 'pan':
             super().mouseReleaseEvent(event)
             
     def erase_at(self, pos: QtCore.QPointF):
@@ -388,98 +367,6 @@ class ImageViewer(QtWidgets.QGraphicsView):
         # Update the scene to reflect the changes
         self._scene.update()
 
-    def get_resize_handle(self, rect: QtWidgets.QGraphicsRectItem, pos: QtCore.QPointF):
-        handle_size = 20
-        rect_rect = rect.rect()
-        top_left = rect_rect.topLeft()
-        bottom_right = rect_rect.bottomRight()
-        
-        handles = {
-            'top_left': QtCore.QRectF(top_left.x() - handle_size/2, top_left.y() - handle_size/2, handle_size, handle_size),
-            'top_right': QtCore.QRectF(bottom_right.x() - handle_size/2, top_left.y() - handle_size/2, handle_size, handle_size),
-            'bottom_left': QtCore.QRectF(top_left.x() - handle_size/2, bottom_right.y() - handle_size/2, handle_size, handle_size),
-            'bottom_right': QtCore.QRectF(bottom_right.x() - handle_size/2, bottom_right.y() - handle_size/2, handle_size, handle_size),
-            'top': QtCore.QRectF(top_left.x(), top_left.y() - handle_size/2, rect_rect.width(), handle_size),
-            'bottom': QtCore.QRectF(top_left.x(), bottom_right.y() - handle_size/2, rect_rect.width(), handle_size),
-            'left': QtCore.QRectF(top_left.x() - handle_size/2, top_left.y(), handle_size, rect_rect.height()),
-            'right': QtCore.QRectF(bottom_right.x() - handle_size/2, top_left.y(), handle_size, rect_rect.height()),
-        }
-        
-        for handle, handle_rect in handles.items():
-            if handle_rect.contains(pos):
-                return handle
-        return None
-
-    def get_cursor(self, rect: QtWidgets.QGraphicsRectItem, pos: QtCore.QPointF):
-        handle = self.get_resize_handle(rect, pos)
-        if handle:
-            cursors = {
-                'top_left': QtCore.Qt.CursorShape.SizeFDiagCursor,
-                'top_right': QtCore.Qt.CursorShape.SizeBDiagCursor,
-                'bottom_left': QtCore.Qt.CursorShape.SizeBDiagCursor,
-                'bottom_right': QtCore.Qt.CursorShape.SizeFDiagCursor,
-                'top': QtCore.Qt.CursorShape.SizeVerCursor,
-                'bottom': QtCore.Qt.CursorShape.SizeVerCursor,
-                'left': QtCore.Qt.CursorShape.SizeHorCursor,
-                'right': QtCore.Qt.CursorShape.SizeHorCursor,
-            }
-            return cursors.get(handle, QtCore.Qt.CursorShape.ArrowCursor)
-        elif rect.rect().contains(pos):
-            return QtCore.Qt.CursorShape.SizeAllCursor  # Move cursor when inside the box
-        return QtCore.Qt.CursorShape.ArrowCursor
-    
-    def get_cursor_for_box_tool(self, pos: QtCore.QPointF):
-        if self._photo.contains(pos):
-            for rect in self._rectangles:
-                if rect.rect().contains(pos):
-                    return QtCore.Qt.CursorShape.PointingHandCursor  # Click cursor when hovering over a box
-            return QtCore.Qt.CursorShape.CrossCursor  # Crosshair cursor when inside the image but not over a box
-        return QtCore.Qt.CursorShape.ArrowCursor  # Default arrow cursor when outside the image
-    
-    def resize_rectangle(self, pos: QtCore.QPointF):
-        if not self._selected_rect or not self._resize_handle:
-            return
-
-        rect = self._selected_rect.rect()
-        dx = pos.x() - self._resize_start.x()
-        dy = pos.y() - self._resize_start.y()
-
-        new_rect = QtCore.QRectF(rect)
-
-        if self._resize_handle in ['top_left', 'left', 'bottom_left']:
-            new_rect.setLeft(rect.left() + dx)
-        if self._resize_handle in ['top_left', 'top', 'top_right']:
-            new_rect.setTop(rect.top() + dy)
-        if self._resize_handle in ['top_right', 'right', 'bottom_right']:
-            new_rect.setRight(rect.right() + dx)
-        if self._resize_handle in ['bottom_left', 'bottom', 'bottom_right']:
-            new_rect.setBottom(rect.bottom() + dy)
-
-        # Ensure the rectangle doesn't flip inside out
-        if new_rect.width() < 10:
-            if 'left' in self._resize_handle:
-                new_rect.setLeft(new_rect.right() - 10)
-            else:
-                new_rect.setRight(new_rect.left() + 10)
-        if new_rect.height() < 10:
-            if 'top' in self._resize_handle:
-                new_rect.setTop(new_rect.bottom() - 10)
-            else:
-                new_rect.setBottom(new_rect.top() + 10)
-
-        constrained_rect = self.constrain_rect(new_rect)
-        self._selected_rect.setRect(constrained_rect)
-        self._resize_start = pos
-
-        # Emit the rectangle_resized signal
-        self.rectangle_changed.emit(constrained_rect)
-
-    def constrain_rect(self, rect: QtCore.QRectF):
-        photo_rect = self._photo.boundingRect()
-        new_x = max(0, min(rect.x(), photo_rect.width() - rect.width()))
-        new_y = max(0, min(rect.y(), photo_rect.height() - rect.height()))
-        return QtCore.QRectF(new_x, new_y, rect.width(), rect.height())
-
     def constrain_point(self, point: QtCore.QPointF):
         return QtCore.QPointF(
             max(0, min(point.x(), self._photo.pixmap().width())),
@@ -488,6 +375,7 @@ class ImageViewer(QtWidgets.QGraphicsView):
 
     def select_rectangle(self, rect: QtWidgets.QGraphicsRectItem):
         self.deselect_all()
+        rect.selected = True
         rect.setBrush(QtGui.QBrush(QtGui.QColor(255, 0, 0, 100)))  # Transparent red
         self._selected_rect = rect
 
@@ -496,6 +384,8 @@ class ImageViewer(QtWidgets.QGraphicsView):
     def deselect_all(self):
         for rect in self._rectangles:
             rect.setBrush(QtGui.QBrush(QtGui.QColor(255, 192, 203, 125)))  # Transparent pink
+            rect.selected = False
+            self.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         self._selected_rect = None
 
     def get_rectangle_properties(self):
@@ -520,16 +410,28 @@ class ImageViewer(QtWidgets.QGraphicsView):
             )
             for rect in self._rectangles
         ]
-    
-    def get_cv2_image(self):
-        """Get the currently loaded image as a cv2 image."""
 
+
+    def get_cv2_image(self, paint_all=False):
+        """Get the currently loaded image as a cv2 image, including text blocks and all scene items."""
         if self._photo.pixmap() is None:
             return None
+        
+        if paint_all:
+            # Create a QImage with the same size as the scene
+            scene_rect = self._scene.sceneRect()
+            qimage = QtGui.QImage(scene_rect.size().toSize(), QtGui.QImage.Format.Format_ARGB32)
+            qimage.fill(QtCore.Qt.transparent)
 
-        qimage = self._photo.pixmap().toImage()
+            # Create a QPainter to render the scene onto the QImage
+            painter = QtGui.QPainter(qimage)
+            self._scene.render(painter)
+            painter.end()
+        else:
+            qimage = self._photo.pixmap().toImage()
+
+        # Convert QImage to cv2 image
         qimage = qimage.convertToFormat(QtGui.QImage.Format.Format_RGB888)
-
         width = qimage.width()
         height = qimage.height()
         bytes_per_line = qimage.bytesPerLine()
@@ -547,10 +449,8 @@ class ImageViewer(QtWidgets.QGraphicsView):
 
         # Convert memoryview to a numpy array considering the complete data with padding
         arr = np.array(ptr).reshape((height, bytes_per_line))
-
         # Exclude the padding bytes, keeping only the relevant image data
         arr = arr[:, :width * 3]
-
         # Reshape to the correct dimensions without the padding bytes
         arr = arr.reshape((height, width, 3))
 
@@ -569,6 +469,7 @@ class ImageViewer(QtWidgets.QGraphicsView):
         self._photo.setShapeMode(QtWidgets.QGraphicsPixmapItem.BoundingRectShape)
         self._scene.addItem(self._photo)
         self._rectangles = []
+        self._text_items = []
         self._selected_rect = None
 
     def clear_rectangles(self):
@@ -576,6 +477,11 @@ class ImageViewer(QtWidgets.QGraphicsView):
             self._scene.removeItem(rect)
         self._rectangles.clear()
         self._selected_rect = None
+
+    def clear_text_items(self):
+        for item in self._text_items:
+            self._scene.removeItem(item)
+        self._text_items.clear()
 
     def setPhoto(self, pixmap: QtGui.QPixmap =None):
         self.clear_scene()
@@ -725,10 +631,35 @@ class ImageViewer(QtWidgets.QGraphicsView):
             rect_item = QtWidgets.QGraphicsRectItem(QtCore.QRectF(*rect_data), self._photo)
             rect_item.setBrush(QtGui.QBrush(QtGui.QColor(255, 192, 203, 125)))  # Transparent pink
             self._rectangles.append(rect_item)
+        
+        # Recreate text block items
+        for text_block in state.get('text_items_state', []):
+            text_item = self.add_movable_txtitem(
+                text_block['text'],
+                text_block['font_input'],
+                text_block['font_size'],
+                text_block['block']
+            )
+            text_item.setPos(QtCore.QPointF(*text_block['position']))
+            text_item.setRotation(text_block['rotation'])
+            text_item.setScale(text_block['scale'])
 
     def save_state(self):
         transform = self.transform()
         center = self.mapToScene(self.viewport().rect().center())
+
+        text_items_state = []
+        for item in self._text_items:
+            text_items_state.append({
+                'text': item.toPlainText(),
+                'font_input': item.font_input,
+                'font_size': item.font_size,
+                'position': (item.pos().x(), item.pos().y()),
+                'rotation': item.rotation(),
+                'scale': item.scale(),
+                'block': item.text_block
+            })
+
         return {
             'rectangles': [rect.rect().getRect() for rect in self._rectangles],
             'transform': (
@@ -738,7 +669,8 @@ class ImageViewer(QtWidgets.QGraphicsView):
             ),
             'center': (center.x(), center.y()),
             'scene_rect': (self.sceneRect().x(), self.sceneRect().y(), 
-                           self.sceneRect().width(), self.sceneRect().height())
+                        self.sceneRect().width(), self.sceneRect().height()),
+            'text_items_state': text_items_state
         }
 
     def create_inpaint_cursor(self, cursor_type, size):
@@ -779,4 +711,15 @@ class ImageViewer(QtWidgets.QGraphicsView):
         self._eraser_cursor = self.create_inpaint_cursor("eraser", size)
         if self._current_tool == "eraser":
             self.setCursor(self._eraser_cursor)
-
+    
+    def get_font_family(self, font_input: str, font_size: int) -> QFont:
+        # Check if font_input is a file path
+        if os.path.splitext(font_input)[1].lower() in ['.ttf', '.otf', '.ttc']:
+            font_id = QFontDatabase.addApplicationFont(font_input)
+            if font_id != -1:
+                font_families = QFontDatabase.applicationFontFamilies(font_id)
+                if font_families:
+                    return font_families[0]
+        
+        # If not a file path or loading failed, treat as font family name
+        return font_input
