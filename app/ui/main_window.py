@@ -375,7 +375,7 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
         self.outline_width_dropdown = MComboBox().small()
         self.outline_width_dropdown.setFixedWidth(60)
         self.outline_width_dropdown.setToolTip(self.tr("Outline Width"))
-        self.outline_width_dropdown.addItems(['1.0', '1.15', '1.3', '1.4' '1.5'])
+        self.outline_width_dropdown.addItems(['1.0', '1.15', '1.3', '1.4', '1.5'])
 
         outline_settings_layout.addWidget(self.outline_checkbox)
         outline_settings_layout.addWidget(self.outline_font_color_button)
@@ -420,7 +420,6 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
 
         self.delete_button = self.create_tool_button(svg = "trash_line.svg", checkable=False)
         self.delete_button.setToolTip("Delete Selected Box")
-        self.delete_button.clicked.connect(self.delete_selected_box)
 
         self.clear_rectangles_button = self.create_tool_button(svg = "clear-outlined.svg")
         self.clear_rectangles_button.setToolTip(self.tr("Remove all the Boxes on the Image"))
@@ -682,9 +681,6 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
 
     def brush_redo(self):
         self.image_viewer.redo_brush_stroke()
-
-    def delete_selected_box(self):
-        self.image_viewer.delete_selected_rectangle()
 
     def get_font_family(self, font_input: str) -> QFont:
         # Check if font_input is a file path

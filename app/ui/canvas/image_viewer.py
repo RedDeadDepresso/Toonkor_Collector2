@@ -416,17 +416,43 @@ class ImageViewer(QtWidgets.QGraphicsView):
         """Get the currently loaded image as a cv2 image, including text blocks and all scene items."""
         if self._photo.pixmap() is None:
             return None
-        
+
         if paint_all:
-            # Create a QImage with the same size as the scene
-            scene_rect = self._scene.sceneRect()
-            qimage = QtGui.QImage(scene_rect.size().toSize(), QtGui.QImage.Format.Format_ARGB32)
+            # Create a high-resolution QImage
+            scale_factor = 2  # Increase this for higher resolution
+            pixmap = self._photo.pixmap()
+            original_size = pixmap.size()
+            scaled_size = original_size * scale_factor
+            
+            qimage = QtGui.QImage(scaled_size, QtGui.QImage.Format_ARGB32)
             qimage.fill(QtCore.Qt.transparent)
 
-            # Create a QPainter to render the scene onto the QImage
+            # Create a QPainter with antialiasing
             painter = QtGui.QPainter(qimage)
+            painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
+            painter.setRenderHint(QtGui.QPainter.RenderHint.TextAntialiasing, True)
+            painter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform, True)
+
+            # Save the current view's transformation
+            original_transform = self._scene.views()[0].transform()
+
+            # Reset the transformation to identity (no zoom, no pan)
+            self._scene.views()[0].resetTransform()
+
+            # Set the sceneRect to cover the entire image
+            self._scene.setSceneRect(0, 0, original_size.width(), original_size.height())
+
+            # Render the scene
             self._scene.render(painter)
             painter.end()
+
+            # Scale down the image to the original size
+            qimage = qimage.scaled(original_size, 
+                                QtCore.Qt.AspectRatioMode.KeepAspectRatio, 
+                                QtCore.Qt.TransformationMode.SmoothTransformation)
+
+            # Restore the original transformation
+            self._scene.views()[0].setTransform(original_transform)
         else:
             qimage = self._photo.pixmap().toImage()
 
@@ -438,7 +464,6 @@ class ImageViewer(QtWidgets.QGraphicsView):
 
         byte_count = qimage.sizeInBytes()
         expected_size = height * bytes_per_line  # bytes per line can include padding
-
 
         if byte_count != expected_size:
             print(f"QImage sizeInBytes: {byte_count}, Expected size: {expected_size}")
@@ -634,15 +659,27 @@ class ImageViewer(QtWidgets.QGraphicsView):
         
         # Recreate text block items
         for text_block in state.get('text_items_state', []):
-            text_item = self.add_movable_txtitem(
-                text_block['text'],
-                text_block['font_input'],
-                text_block['font_size'],
-                text_block['block']
+            text_item = TextBlockItem(
+                text=text_block['text'],
+                parent_item= self._photo,
+                font_family=text_block['font_family'],
+                font_size=text_block['font_size'],
+                render_color=text_block['text_color'],
+                alignment=text_block['alignment'],
+                line_spacing=text_block['line_spacing'],
+                outline_color=text_block['outline_color'],
+                outline_width=text_block['outline_width'],
+                bold=text_block['bold'],
+                italic=text_block['italic'],
+                underline=text_block['underline'],
+                text_block=text_block['block']
             )
             text_item.setPos(QtCore.QPointF(*text_block['position']))
             text_item.setRotation(text_block['rotation'])
             text_item.setScale(text_block['scale'])
+
+            self._scene.addItem(text_item)
+            self._text_items.append(text_item)  
 
     def save_state(self):
         transform = self.transform()
@@ -651,9 +688,17 @@ class ImageViewer(QtWidgets.QGraphicsView):
         text_items_state = []
         for item in self._text_items:
             text_items_state.append({
-                'text': item.toPlainText(),
-                'font_input': item.font_input,
+                'text': item.toHtml(),
+                'font_family': item.font_family,
                 'font_size': item.font_size,
+                'text_color': item.text_color,
+                'alignment': item.alignment,
+                'line_spacing': item.line_spacing,
+                'outline_color': item.outline_color,
+                'outline_width': item.outline_width,
+                'bold': item.bold,
+                'italic': item.italic,
+                'underline': item.underline,
                 'position': (item.pos().x(), item.pos().y()),
                 'rotation': item.rotation(),
                 'scale': item.scale(),
