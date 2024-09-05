@@ -27,14 +27,17 @@ class ManhwaSchema(Schema):
     title: str
     author: str = ""
     description: str = ""
-    thumbnail: str
     chapters: list[ChapterSchema] = []
 
-    en_title: str | None = ""
+    en_title: str = ""
     en_author: str = ""
     en_description: str = ""
 
+    toonkor_url: str = ""
+    mangadex_url: str = ""
     thumbnail: str = ""
+
+    mangadex_id: str = ""
     slug: str
 
 

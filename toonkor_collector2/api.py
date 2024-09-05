@@ -20,7 +20,7 @@ def search_database(manhwa_slug: str) -> Manhwa | None:
         return Manhwa.objects.get(slug=manhwa_slug)
     except Manhwa.DoesNotExist:
         return None
-
+    
 
 def update_manhwa_from_mangadex(manhwa: dict, manhwa_db: Manhwa):
     """
@@ -29,13 +29,17 @@ def update_manhwa_from_mangadex(manhwa: dict, manhwa_db: Manhwa):
     :param manhwa: The Manhwa data dictionary to update.
     :param manhwa_db: The database instance of the Manhwa to update.
     """
-    mangadex_search = mangadex_api.search(manhwa.get("title", ""))
+    mangadex_search = mangadex_api.search(manhwa["title"])
     if mangadex_search:
         mangadex_data = mangadex_search[0]
         manhwa.update(mangadex_data)
+    if manhwa_db:
         manhwa_db.en_title = manhwa.get("en_title", "")
         manhwa_db.en_description = manhwa.get("en_description", "")
+        manhwa_db.mangadex_id = manhwa.get("mangadex_id", "")
         manhwa_db.save()
+    if mangadex_search or manhwa_db:
+        manhwa["mangadex_url"] = "https://mangadex.org/title/" + manhwa["mangadex_id"]
 
 
 def search(manhwa_slug: str) -> dict:
@@ -59,7 +63,7 @@ def search(manhwa_slug: str) -> dict:
         manhwa.update(toonkor_api.get_manga_details(manhwa_slug))
 
         # If English title or description is missing, update from Mangadex API
-        if not manhwa.get("en_title") and not manhwa.get("en_description"):
+        if not all([manhwa.get("en_title"), manhwa.get("en_description"), manhwa.get("mangadex_id")]):
             update_manhwa_from_mangadex(manhwa, manhwa_db)
 
         cached_manhwas[manhwa_slug] = manhwa
@@ -69,7 +73,7 @@ def search(manhwa_slug: str) -> dict:
     return manhwa
 
 
-@api.get("/library", response=list[ManhwaModelSchema])
+@api.get("/library", response=list[ManhwaSchema])
 def library(request):
     """
     Retrieve all Manhwa in the library.

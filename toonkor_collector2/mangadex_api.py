@@ -21,7 +21,7 @@ class MangadexAPI:
         response = self.client.get(
             f"{self.base_url}/manga", params={"title": query}, headers=self.headers
         )
-
+        
         for result in response.json().get("data", []):
             for alt_title in result["attributes"].get("altTitles", []):
                 if "ko" in alt_title:
@@ -32,11 +32,12 @@ class MangadexAPI:
                         "en_description": result["attributes"]["description"].get(
                             "en", ""
                         ),
+                        "mangadex_id": result["id"]
                     }
                     self.cached_manhwas[korean_title] = temp
                     output.append(temp)
         return output
-
+    
     def update_toonkor_search(self, toonkor_search: dict) -> ManhwaSchema:
         korean_title = toonkor_search["title"]
         if korean_title in self.cached_manhwas:

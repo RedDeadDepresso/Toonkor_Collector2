@@ -231,6 +231,7 @@ class ToonkorAPI:
         response = self.client.get(manga_url, headers=self.headers)
         soup = BeautifulSoup(response.text, "lxml")
         details = self.manga_details_parse(soup)
+        details["toonkor_url"] = manga_url
         details["slug"] = slug
         return details
 

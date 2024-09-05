@@ -7,12 +7,14 @@ class Manhwa(models.Model):
     title = models.CharField(max_length=512)
     author = models.CharField(max_length=512, blank=True)
     description = models.TextField(blank=True)
+    chapters_num = models.IntegerField(default=0)
 
     en_title = models.CharField(max_length=512, blank=True)
     en_author = models.CharField(max_length=512, blank=True)
     en_description = models.TextField(blank=True)
 
     thumbnail = models.ImageField(blank=True)
+    mangadex_id = models.CharField(max_length=512, blank=True)
     slug = models.SlugField(default="")
 
     def __str__(self) -> str:
