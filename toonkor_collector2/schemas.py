@@ -7,10 +7,8 @@ class ManhwaModelSchema(ModelSchema):
         model = Manhwa
         fields = (
             "title",
-            "author",
             "description",
             "en_title",
-            "en_author",
             "en_description",
             "thumbnail",
             "slug",
@@ -25,12 +23,10 @@ class ChapterSchema(Schema):
 
 class ManhwaSchema(Schema):
     title: str
-    author: str = ""
     description: str = ""
     chapters: list[ChapterSchema] = []
 
     en_title: str = ""
-    en_author: str = ""
     en_description: str = ""
 
     toonkor_url: str = ""
