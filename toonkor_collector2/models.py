@@ -13,7 +13,7 @@ class Manhwa(models.Model):
     en_description = models.TextField(blank=True)
 
     thumbnail = models.ImageField(blank=True)
-    slug = models.SlugField(default='')
+    slug = models.SlugField(default="")
 
     def __str__(self) -> str:
         return self.title

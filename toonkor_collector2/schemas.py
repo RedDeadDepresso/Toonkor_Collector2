@@ -6,16 +6,14 @@ class ManhwaModelSchema(ModelSchema):
     class Meta:
         model = Manhwa
         fields = (
-            'title', 
-            'author',
-            'description',
-
-            'en_title',
-            'en_author',
-            'en_description',
-
-            'thumbnail',
-            'slug'
+            "title",
+            "author",
+            "description",
+            "en_title",
+            "en_author",
+            "en_description",
+            "thumbnail",
+            "slug",
         )
 
 
@@ -27,16 +25,16 @@ class ChapterSchema(Schema):
 
 class ManhwaSchema(Schema):
     title: str
-    author: str = ''
-    description: str = ''
+    author: str = ""
+    description: str = ""
     thumbnail: str
     chapters: list[ChapterSchema] = []
 
-    en_title: str | None = ''
-    en_author: str = ''
-    en_description: str = ''
+    en_title: str | None = ""
+    en_author: str = ""
+    en_description: str = ""
 
-    thumbnail: str = ''
+    thumbnail: str = ""
     slug: str
 
 
@@ -45,5 +43,4 @@ class ChapterModelSchema(ModelSchema):
 
     class Meta:
         model = Chapter
-        fields = ('manhwa', 'index', 'status')
-
+        fields = ("manhwa", "index", "status")

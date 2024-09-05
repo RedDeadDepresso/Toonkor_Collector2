@@ -10,7 +10,7 @@ from toonkor_collector2.toonkor_api import toonkor_api
 class QtConsumer(AsyncWebsocketConsumer):
     """
     QtConsumer is an AsyncWebsocketConsumer responsible for managing a WebSocket
-    connection that handles the translation process. It interacts with the comic_django 
+    connection that handles the translation process. It interacts with the comic_django
     GUI and listens for translation requests.
 
     Attributes:
@@ -22,7 +22,7 @@ class QtConsumer(AsyncWebsocketConsumer):
         Handles a new WebSocket connection. Adds the connection to the 'qt' group
         and starts the comic_django GUI process. Accepts the WebSocket connection.
         """
-        self.group_name = 'qt'
+        self.group_name = "qt"
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
 
@@ -33,7 +33,7 @@ class QtConsumer(AsyncWebsocketConsumer):
         Args:
             event (dict): The event data containing the text_data to be sent.
         """
-        to_translate = event['to_translate']
+        to_translate = event["to_translate"]
         await self.send(json.dumps(to_translate))
 
     async def receive(self, text_data):
@@ -45,21 +45,23 @@ class QtConsumer(AsyncWebsocketConsumer):
             text_data (str): JSON string containing the manhwa slug and chapter index.
         """
         data = json.loads(text_data)
-        manhwa_slug = data['slug']
-        chapter = data['chapter']
+        manhwa_slug = data["slug"]
+        chapter = data["chapter"]
 
         manhwa_obj = await sync_to_async(Manhwa.objects.get)(slug=manhwa_slug)
-        chapter_obj = await sync_to_async(Chapter.objects.get)(manhwa=manhwa_obj, index=chapter)
+        chapter_obj = await sync_to_async(Chapter.objects.get)(
+            manhwa=manhwa_obj, index=chapter
+        )
         chapter_obj.translated = True
         await sync_to_async(chapter_obj.save)()
 
         await self.channel_layer.group_send(
-            f'download_translate_{toonkor_api.encode_name(manhwa_slug)}',
+            f"download_translate_{toonkor_api.encode_name(manhwa_slug)}",
             {
-                'type': 'send_progress',
-                'task': data['task'],
-                'progress': data['progress'],
-            }
+                "type": "send_progress",
+                "task": data["task"],
+                "progress": data["progress"],
+            },
         )
 
     async def disconnect(self, close_code):
@@ -87,8 +89,10 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
         Handles a new WebSocket connection. Adds the connection to the 'download_translate' group
         and accepts the WebSocket connection.
         """
-        self.manhwa_name = self.scope['url_route']['kwargs']['manhwa_slug']
-        self.group_name = f'download_translate_{toonkor_api.encode_name(self.manhwa_name)}'
+        self.manhwa_name = self.scope["url_route"]["kwargs"]["manhwa_slug"]
+        self.group_name = (
+            f"download_translate_{toonkor_api.encode_name(self.manhwa_name)}"
+        )
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
 
@@ -101,20 +105,17 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
             text_data (str): JSON string containing the task, manhwa slug, and chapters to download.
         """
         data = json.loads(text_data)
-        task = data['task']
-        manhwa_slug = data['slug']
-        chapters = data['chapters']
+        task = data["task"]
+        manhwa_slug = data["slug"]
+        chapters = data["chapters"]
 
         # Start the download process
         download_dict = await self.download_chapters(manhwa_slug, chapters)
 
-        if task == 'download_translate':
+        if task == "download_translate":
             await self.channel_layer.group_send(
-                'qt',
-                {
-                    'type': 'send_translation_request',
-                    'to_translate': download_dict
-                }
+                "qt",
+                {"type": "send_translation_request", "to_translate": download_dict},
             )
 
     async def download_chapters(self, manhwa_slug, chapters):
@@ -131,40 +132,40 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
             dict: A dictionary containing the paths to the downloaded images for each chapter.
         """
         download_dict = {}
-        progress = {
-            'current': 0,
-            'total': len(chapters)
-        }
+        progress = {"current": 0, "total": len(chapters)}
 
         try:
             manhwa_obj = await sync_to_async(Manhwa.objects.get)(slug=manhwa_slug)
             for chapter in chapters:
-                pages_path = await asyncio.to_thread(toonkor_api.download_chapter, manhwa_obj, chapter)
+                pages_path = await asyncio.to_thread(
+                    toonkor_api.download_chapter, manhwa_obj, chapter
+                )
                 if pages_path is not None:
-                    progress['current'] += 1
-                    chapter_obj, created = await sync_to_async(Chapter.objects.get_or_create)(
-                        manhwa=manhwa_obj,
-                        index=chapter
-                    )
+                    progress["current"] += 1
+                    chapter_obj, created = await sync_to_async(
+                        Chapter.objects.get_or_create
+                    )(manhwa=manhwa_obj, index=chapter)
 
                     # Send progress to WebSocket client
-                    await self.send_progress({
-                        'task': 'download',
-                        'current_chapter': chapter,
-                        'progress': progress
-                    })
+                    await self.send_progress(
+                        {
+                            "task": "download",
+                            "current_chapter": chapter,
+                            "progress": progress,
+                        }
+                    )
 
                     # Initialize nested dictionary if not already done
                     if manhwa_slug not in download_dict:
                         download_dict[manhwa_slug] = {}
                     if chapter not in download_dict[manhwa_slug]:
                         download_dict[manhwa_slug][chapter] = {}
-                        
-                    download_dict[manhwa_slug][chapter]['images_set'] = pages_path
+
+                    download_dict[manhwa_slug][chapter]["images_set"] = pages_path
 
         except Exception as e:
             # Handle exceptions and maybe log them
-            await self.send(text_data=json.dumps({'error': str(e)}))
+            await self.send(text_data=json.dumps({"error": str(e)}))
         return download_dict
 
     async def send_progress(self, event):

@@ -17,11 +17,11 @@ class MangadexAPI:
         if query in self.cached_manhwas:
             output.append(self.cached_manhwas[query])
             return output
-        
-        response = self.client.get(f"{self.base_url}/manga", 
-                                   params={"title": query}, 
-                                   headers=self.headers)
-        
+
+        response = self.client.get(
+            f"{self.base_url}/manga", params={"title": query}, headers=self.headers
+        )
+
         for result in response.json().get("data", []):
             for alt_title in result["attributes"].get("altTitles", []):
                 if "ko" in alt_title:
@@ -29,7 +29,9 @@ class MangadexAPI:
                     temp = {
                         "title": korean_title,
                         "en_title": result["attributes"]["title"].get("en", ""),
-                        "en_description": result["attributes"]["description"].get("en", "")
+                        "en_description": result["attributes"]["description"].get(
+                            "en", ""
+                        ),
                     }
                     self.cached_manhwas[korean_title] = temp
                     output.append(temp)
@@ -41,26 +43,36 @@ class MangadexAPI:
             toonkor_search.update(self.cached_manhwas[korean_title])
 
         else:
-            response = self.client.get(f"{self.base_url}/manga", 
-                                    params={"title": korean_title}, 
-                                    headers=self.headers)
-            
+            response = self.client.get(
+                f"{self.base_url}/manga",
+                params={"title": korean_title},
+                headers=self.headers,
+            )
+
             for result in response.json().get("data", []):
                 for alt_title in result["attributes"].get("altTitles", []):
                     if alt_title.get("ko") == korean_title:
                         temp = {
                             "en_title": result["attributes"].get("title", ""),
-                            "en_description": result["attributes"].get("description", "")
+                            "en_description": result["attributes"].get(
+                                "description", ""
+                            ),
                         }
                         self.cached_manhwas[korean_title] = temp
                         toonkor_search.update(temp)
         return toonkor_search
-    
-    def multi_update_toonkor_search(self, toonkor_results: list[ManhwaSchema]) -> list[ManhwaSchema]:
+
+    def multi_update_toonkor_search(
+        self, toonkor_results: list[ManhwaSchema]
+    ) -> list[ManhwaSchema]:
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [executor.submit(self.translate_toonkor_search, toonkor_search) for toonkor_search in toonkor_results]
-            return [future.result() for future in concurrent.futures.as_completed(futures)]
+            futures = [
+                executor.submit(self.translate_toonkor_search, toonkor_search)
+                for toonkor_search in toonkor_results
+            ]
+            return [
+                future.result() for future in concurrent.futures.as_completed(futures)
+            ]
 
 
 mangadex_api = MangadexAPI()
-
