@@ -1,5 +1,6 @@
 import requests
 import concurrent.futures
+from toonkor_collector2.schemas import ManhwaSchema
 
 
 class MangadexAPI:
@@ -11,16 +12,16 @@ class MangadexAPI:
         self.base_url = "https://api.mangadex.org"
         self.cached_manhwas = {}
 
-    def search(self, query):
-        output = {"results":[]}
+    def search(self, query: str) -> list[ManhwaSchema]:
+        output = []
         if query in self.cached_manhwas:
-            output["results"].append(self.cached_manhwas[query])
+            output.append(self.cached_manhwas[query])
             return output
         
         response = self.client.get(f"{self.base_url}/manga", 
                                    params={"title": query}, 
                                    headers=self.headers)
-
+        
         for result in response.json().get("data", []):
             for alt_title in result["attributes"].get("altTitles", []):
                 if "ko" in alt_title:
@@ -31,10 +32,10 @@ class MangadexAPI:
                         "en_description": result["attributes"]["description"].get("en", "")
                     }
                     self.cached_manhwas[korean_title] = temp
-                    output["results"].append(temp)
+                    output.append(temp)
         return output
 
-    def update_toonkor_search(self, toonkor_search: dict):
+    def update_toonkor_search(self, toonkor_search: dict) -> ManhwaSchema:
         korean_title = toonkor_search["title"]
         if korean_title in self.cached_manhwas:
             toonkor_search.update(self.cached_manhwas[korean_title])
@@ -55,10 +56,10 @@ class MangadexAPI:
                         toonkor_search.update(temp)
         return toonkor_search
     
-    def multi_update_toonkor_search(self, toonkor_results):
+    def multi_update_toonkor_search(self, toonkor_results: list[ManhwaSchema]) -> list[ManhwaSchema]:
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [executor.submit(self.translate_toonkor_search, toonkor_search) for toonkor_search in toonkor_results["results"]]
-            return {"results": [future.result() for future in concurrent.futures.as_completed(futures)]}
+            futures = [executor.submit(self.translate_toonkor_search, toonkor_search) for toonkor_search in toonkor_results]
+            return [future.result() for future in concurrent.futures.as_completed(futures)]
 
 
 mangadex_api = MangadexAPI()

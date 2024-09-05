@@ -1,24 +1,102 @@
-from django.shortcuts import get_object_or_404
 from ninja import NinjaAPI
-from toonkor_collector2.models import Manhwa, Chapter
-from toonkor_collector2.schemas import ManhwaSchema, ChapterSchema
+from django.forms.models import model_to_dict
+from toonkor_collector2.models import Manhwa
+from toonkor_collector2.schemas import ManhwaModelSchema, ManhwaSchema
+from toonkor_collector2.mangadex_api import mangadex_api
+from toonkor_collector2.toonkor_api import toonkor_api
+
+api = NinjaAPI()
+cached_manhwas = {}
 
 
-app = NinjaAPI()
+def search_database(manhwa_slug: str) -> Manhwa | None:
+    """
+    Search for a Manhwa in the database by slug.
 
-@app.get("library/", response=list[ManhwaSchema])
-def get_library(request):
+    :param manhwa_slug: The slug of the Manhwa to search for.
+    :return: A Manhwa object if found, otherwise None.
+    """
+    try:
+        return Manhwa.objects.get(slug=manhwa_slug)
+    except Manhwa.DoesNotExist:
+        return None
+
+
+def update_manhwa_from_mangadex(manhwa: dict, manhwa_db: Manhwa):
+    """
+    Update the Manhwa details using Mangadex API if necessary.
+
+    :param manhwa: The Manhwa data dictionary to update.
+    :param manhwa_db: The database instance of the Manhwa to update.
+    """
+    mangadex_search = mangadex_api.search(manhwa.get("title", ""))
+    if mangadex_search:
+        mangadex_data = mangadex_search[0]
+        manhwa.update(mangadex_data)
+        manhwa_db.en_title = manhwa.get("en_title", "")
+        manhwa_db.en_description = manhwa.get("en_description", "")
+        manhwa_db.save()
+
+
+def search(manhwa_slug: str) -> dict:
+    """
+    Search for a Manhwa using the cache, database, and Toonkor API.
+
+    :param manhwa_slug: The slug of the Manhwa to search for.
+    :return: A dictionary containing the Manhwa details.
+    """
+    if manhwa_slug in cached_manhwas:
+        return cached_manhwas[manhwa_slug]
+
+    manhwa = {}
+    manhwa_db = search_database(manhwa_slug)
+
+    if manhwa_db:
+        manhwa = model_to_dict(manhwa_db)
+
+    try:
+        # Update manhwa details from Toonkor API
+        manhwa.update(toonkor_api.get_manga_details(manhwa_slug))
+
+        # If English title or description is missing, update from Mangadex API
+        if not manhwa.get("en_title") and not manhwa.get("en_description"):
+            update_manhwa_from_mangadex(manhwa, manhwa_db)
+
+        cached_manhwas[manhwa_slug] = manhwa
+    except Exception as e:
+        print(f"Error searching for manhwa: {e}")
+
+    return manhwa
+
+
+@api.get("/library", response=list[ManhwaModelSchema])
+def library(request):
+    """
+    Retrieve all Manhwa in the library.
+    """
     return Manhwa.objects.all()
 
-@app.get("library/{manhwa_slug}", response=ManhwaSchema)
-def get_library_manhwa(request, manhwa_slug: str):
-    return Manhwa.objects.all(slug=manhwa_slug)
 
-@app.get("browse/search/", response=dict)
-def browse_search(request, query: str):
-    return Manhwa.objects.all()
+@api.get(path="/library/manhwa", response=ManhwaSchema)
+def library_manhwa(request, manhwa_slug: str):
+    """
+    Retrieve a specific Manhwa by slug from the library.
+    """
+    return search(manhwa_slug)
 
-@app.get("library/{manhwa_slug}", response=ManhwaSchema)
-def get_library_manhwa(request, manhwa_slug: str):
-    return Manhwa.objects.all(slug=manhwa_slug)
 
+@api.get("/browse/search", response=list[ManhwaSchema])
+def browse(request, query: str):
+    """
+    Search for Manhwa using Mangadex API and update with Toonkor API.
+    """
+    results = mangadex_api.search(query)
+    return toonkor_api.multi_update_mangadex_search(results)
+
+
+@api.get("/browse/manhwa/", response=ManhwaSchema)
+def browse_manhwa(request, manhwa_slug: str):
+    """
+    Browse and retrieve a specific Manhwa by slug.
+    """
+    return search(manhwa_slug)

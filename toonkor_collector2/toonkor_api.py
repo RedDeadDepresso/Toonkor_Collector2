@@ -7,6 +7,8 @@ import requests
 import re
 import os
 import concurrent.futures
+from django.utils.timesince import timesince
+from toonkor_collector2.schemas import Manhwa, ManhwaSchema
 
 
 class ToonkorAPI:
@@ -44,13 +46,13 @@ class ToonkorAPI:
 
     def popular_manga_from_element(self, element) -> dict:
         title_element = element.select_one("div.section-item-title a h3")
-        url = element.select_one("div.section-item-title a")['href']
+        slug = element.select_one("div.section-item-title a")['href']
         thumbnail_url = element.select_one("img")['src']
 
         return {
             "title": title_element.text,
-            "url": url,
-            "thumbnail_url": thumbnail_url
+            "slug": slug,
+            "thumbnail": thumbnail_url
         }
 
     def popular_manga_next_page_selector(self) -> Optional[str]:
@@ -113,7 +115,7 @@ class ToonkorAPI:
             "title": title,
             "author": author,
             "description": description,
-            "thumbnail_url": f"{self.base_url}/{thumbnail_url}",
+            "thumbnail": f"{self.base_url}/{thumbnail_url}",
             "chapters": chapters,
         }
 
@@ -136,7 +138,7 @@ class ToonkorAPI:
     @staticmethod
     def to_date(date_str: str) -> int:
         date_format = "%Y-%m-%d"
-        return datetime.strptime(date_str, date_format)
+        return timesince(datetime.strptime(date_str, date_format))
 
     # Pages
 
@@ -174,7 +176,7 @@ class ToonkorAPI:
             "Completed": "/%EC%99%84%EA%B2%B0",
         }
 
-    def search(self, query):
+    def search(self, query: str):
         filters = {
             "type": "/%EB%8B%A8%ED%96%89%EB%B3%B8",  # Optional: specify type (e.g., "Manga")
             "sort": "?fil=%EC%B5%9C%EC%8B%A0"       # Optional: specify sorting (e.g., "Latest")
@@ -185,14 +187,14 @@ class ToonkorAPI:
         soup = BeautifulSoup(response.text, 'lxml')
 
         # Parse the search results
-        output = {"results":[]}
+        output = []
         for element in soup.select(self.search_manga_selector()):
             manga = self.search_manga_from_element(element)
-            output["results"].append(manga)
+            output.append(manga)
         
         return output
     
-    def update_mangadex_search(self, mangadex_search):
+    def update_mangadex_search(self, mangadex_search: ManhwaSchema) -> ManhwaSchema:
         filters = {
             "type": "/%EB%8B%A8%ED%96%89%EB%B3%B8",  # Optional: specify type (e.g., "Manga")
             "sort": "?fil=%EC%B5%9C%EC%8B%A0"       # Optional: specify sorting (e.g., "Latest")
@@ -211,17 +213,17 @@ class ToonkorAPI:
                 mangadex_search.update(manga)
                 return mangadex_search
     
-    def multi_update_mangadex_search(self, mangadex_results):
-        output = {"results": []}
+    def multi_update_mangadex_search(self, mangadex_results: list[ManhwaSchema]) -> list[ManhwaSchema]:
+        output = []
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [executor.submit(self.update_mangadex_search, mangadex_search) for mangadex_search in mangadex_results["results"]]
+            futures = [executor.submit(self.update_mangadex_search, mangadex_search) for mangadex_search in mangadex_results]
             for future in concurrent.futures.as_completed(futures):
                 result = future.result()
                 if result is not None:
-                    output["results"].append(result)
+                    output.append(result)
         return output
 
-    def get_manga_details(self, slug):
+    def get_manga_details(self, slug: str) -> ManhwaSchema:
         manga_url = f"{self.base_url}/{slug}"
         response = self.client.get(manga_url, headers=self.headers)
         soup = BeautifulSoup(response.text, 'lxml')
@@ -229,14 +231,14 @@ class ToonkorAPI:
         details["slug"] = slug
         return details
     
-    def get_page_list(self, slug, chapter):
+    def get_page_list(self, slug: str, chapter: list[str]):
         slug = slug.replace('-', '_')
         chapter_url = f"{self.base_url}/{slug}_{chapter}화.html"
         response = self.client.get(chapter_url, headers=self.headers)
         soup = BeautifulSoup(response.text, 'lxml')
         return self.page_list_parse(soup)
         
-    def download_thumbnail(self, manhwa, img_url):
+    def download_thumbnail(self, manhwa: Manhwa, img_url: str) -> str | None:
         try:
             os.makedirs(manhwa.path, exist_ok=True)
             _, extension = os.path.splitext(img_url)
@@ -246,9 +248,9 @@ class ToonkorAPI:
                 out_file.write(response.content)
             return os.path.basename(manhwa.path) + f'/thumbnail{extension}'
         except:
-            return None
+            return None 
 
-    def download_page(self, manhwa, chapter, index, img_url) -> str:
+    def download_page(self, manhwa: Manhwa, chapter: str, index: str, img_url: str) -> str:
         with requests.get(img_url, stream=True) as response:
             _, extension = os.path.splitext(img_url)
             img_path = os.path.abspath(f'{manhwa.path}/{chapter}/{index}{extension}')
@@ -257,7 +259,7 @@ class ToonkorAPI:
                     out_file.write(response.content)
             return img_path
 
-    def download_chapter(self, manhwa, chapter):
+    def download_chapter(self, manhwa: Manhwa, chapter: str) -> list[str]:
         try:
             # Create necessary directories
             os.makedirs(f'{manhwa.path}/{chapter}', exist_ok=True)
@@ -278,4 +280,3 @@ class ToonkorAPI:
 
     
 toonkor_api = ToonkorAPI()
-

@@ -1,5 +1,5 @@
+import base64
 from django.db import models
-from toonkor_collector2.toonkor_api import toonkor_api
 
 
 # Create your models here.
@@ -17,27 +17,40 @@ class Manhwa(models.Model):
 
     def __str__(self) -> str:
         return self.title
-    
+
     @property
     def path(self) -> str:
         if self.en_title:
             return f"toonkor_collector2/media/{self.en_title}"
         else:
-            return f"toonkor_collector2/media/{toonkor_api.encode_name(self.title)}"
+            return f"toonkor_collector2/media/{self.encode_name(self.title)}"
+
+    def encode_name(self, name):
+        return base64.urlsafe_b64encode(name.encode()).decode().rstrip("=")
+
+
+class StatusChoices(models.TextChoices):
+    ON_TOONKOR = "ON_TOONKOR", "On Toonkor"
+    DOWNLOADED = "DOWNLOADED", "Downloaded"
+    TRANSLATED = "TRANSLATED", "Translated"
 
 
 class Chapter(models.Model):
     manhwa = models.ForeignKey(Manhwa, on_delete=models.CASCADE)
     index = models.IntegerField()
-    translated = models.BooleanField(default=False)
+    status = models.CharField(
+        max_length=20,
+        choices=StatusChoices.choices,
+        default=StatusChoices.ON_TOONKOR,
+    )
 
     def __str__(self) -> str:
         return f"{self.manhwa.title} - Chapter {self.index}"
-    
+
     @property
     def path(self) -> str:
-        return f"toonkor_collector2/{self.manhwa.path()}/{self.index}"
-    
+        return f"toonkor_collector2/{self.manhwa.path}/{self.index}"
+
     @property
     def translated_path(self) -> str:
-        return f"toonkor_collector2/{self.manhwa.path()}/{self.index}/translated"
+        return f"toonkor_collector2/{self.manhwa.path}/{self.index}/translated"

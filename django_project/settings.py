@@ -34,6 +34,7 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 INSTALLED_APPS = [
     "channels",
+    "corsheaders",
     
     "django.contrib.admin",
     "django.contrib.auth",
@@ -49,6 +50,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -140,3 +142,7 @@ STATICFILES_DIRS = [STATIC_DIR, ]
 
 MEDIA_ROOT = MEDIA_DIR
 MEDIA_URL = "/media/"
+
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5173',
+]
