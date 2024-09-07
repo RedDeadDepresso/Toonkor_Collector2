@@ -17,9 +17,9 @@ export const SettingsProvider = ({ children }: childrenProps) => {
     const { colorScheme, setColorScheme } = useMantineColorScheme();
     const [autoFetchToonkorUrl, setAutoFetchToonkorUrl] = useLocalStorage({
         key: 'auto_fetch_toonkor_url',
-        defaultValue: true,
+        defaultValue: false,
     });
-    const [toonkorUrl, setToonkorUrl] = useLocalStorage({ key: 'toonkor_url', defaultValue: '' });
+    const [toonkorUrl, setToonkorUrl] = useLocalStorage({ key: 'toonkor_url', defaultValue: 'https://toonkor434.com' });
 
     const fetchToonkorUrl = async () => {
       try {
@@ -36,6 +36,15 @@ export const SettingsProvider = ({ children }: childrenProps) => {
           console.error(error.message);
       }
     };
+
+    useEffect(() => {
+        if (!autoFetchToonkorUrl) {
+            fetch('/api/set_toonkor_url', {
+                method: "POST",
+                body: JSON.stringify({url: toonkorUrl})
+            }).then(() => console.log("URL set on server"))
+        }
+    }, [])
 
     useEffect(() => {
         if (autoFetchToonkorUrl || !toonkorUrl) {

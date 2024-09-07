@@ -1,9 +1,10 @@
 import cx from 'clsx';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Table, Checkbox, ScrollArea, Group, Text, rem, Button, Menu, ActionIcon, Loader, Grid, Flex, Tooltip } from '@mantine/core';
 import classes from './ChaptersTable.module.css';
 import ChapterData from '@/types/chapterData';
 import { IconDownload, IconFilter, IconLanguage, IconLink, IconTrash, IconWorld } from '@tabler/icons-react';
+import { SettingsContext } from '@/contexts/SettingsContext';
 
 interface ChaptersTableProps {
   slug: string | undefined;
@@ -13,6 +14,7 @@ interface ChaptersTableProps {
 const ChaptersTable = ({ slug, chapters = [] }: ChaptersTableProps) => {
   const [selection, setSelection] = useState<ChapterData[]>([]);
   const [socket, setSocket] = useState<WebSocket | null>(null);
+  const {toonkorUrl} = useContext(SettingsContext); 
 
   useEffect(() => {
     const ws = new WebSocket(`ws://127.0.0.1:8000/ws/download_translate/${slug}/`);
@@ -79,8 +81,12 @@ const ChaptersTable = ({ slug, chapters = [] }: ChaptersTableProps) => {
     }
   };
 
-  const openToonkorURL = () => {
-    window.open('', "_blank", "noreferrer");
+  const openToonkorURL = (chapterIndex: string) => {
+    if (slug) {
+      const chapterSlug = slug.replaceAll('-', '_');
+      const chapterUrl = `${toonkorUrl}/${chapterSlug}_${chapterIndex}화.html`;
+      window.open(chapterUrl, "_blank", "noreferrer");
+    }
   };
 
   const openDownloadURL = () => {
@@ -123,7 +129,7 @@ const ChaptersTable = ({ slug, chapters = [] }: ChaptersTableProps) => {
               </ActionIcon>
             </Menu.Target>
             <Menu.Dropdown>
-              <Menu.Item onClick={() => openToonkorURL()} leftSection={<IconWorld style={{ width: rem(14), height: rem(14) }} />}>
+              <Menu.Item onClick={() => openToonkorURL(chapter.index)} leftSection={<IconWorld style={{ width: rem(14), height: rem(14) }} />}>
                 Toonkor URL
               </Menu.Item>
               <Menu.Item onClick={openDownloadURL} leftSection={<IconDownload style={{ width: rem(14), height: rem(14) }} />}>

@@ -1,72 +1,92 @@
-import { SettingsContext } from '@/contexts/SettingsContext';
-import { Button, Drawer, Group, Switch, Title } from '@mantine/core';
 import { useContext, useEffect, useState } from 'react';
-import { TextInput } from '@mantine/core';
-import { useInputState } from '@mantine/hooks';
+import { SettingsContext } from '@/contexts/SettingsContext';
+import { Button, Drawer, Group, Switch, Title, Text, TextInput } from '@mantine/core';
 
-interface settingsDrawerPros {
+interface SettingsDrawerProps {
   settingsOpened: boolean;
   closeSettings: () => void;
-} 
+}
 
+const SettingsDrawer = ({ settingsOpened, closeSettings }: SettingsDrawerProps) => {
+  const {
+    displayEnglish,
+    setDisplayEnglish,
+    colorScheme,
+    setColorScheme,
+    toonkorUrl,
+    setToonkorUrl,
+    autoFetchToonkorUrl,
+    setAutoFetchToonkorUrl,
+  } = useContext(SettingsContext);
 
-const SettingsDrawer = ({ settingsOpened, closeSettings }: settingsDrawerPros) => {
-  const { displayEnglish, setDisplayEnglish, colorScheme, setColorScheme, toonkorUrl, setToonkorUrl, autoFetchToonkorUrl, setAutoFetchToonkorUrl } = useContext(SettingsContext);
-  const [loading, setLoading] = useState(false);
-  console.log("toonkor_url: " + toonkorUrl)
-  const [inputUrl, setInputUrl] = useInputState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
+  const [inputUrl, setInputUrl] = useState<string>(toonkorUrl);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [success, setSuccess] = useState<boolean>(false);
 
   useEffect(() => {
     setInputUrl(toonkorUrl);
   }, [toonkorUrl]);
 
-    const sumbmitToonkorUrl = async() => {
-        const apiUrl = "/api/set_toonkor_url";
-        setLoading(true);
-        try {
-          const response = await fetch(apiUrl, {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({url: inputUrl})
-            });
-          if (!response.ok) {
-            throw new Error(`Response status: ${response.status}`);
-          }
-          const json = await response.json();
-          console.log(json.url);
-          if (!json.error) {
-            console.log(inputUrl);
-            setToonkorUrl(inputUrl);
-          }
-          else {
-            throw new Error(`${json.error}`)
-          };
-        } catch (error: any) {
-          console.error(error.message);
-        }
-        setLoading(false);
+  const submitToonkorUrl = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/set_toonkor_url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: inputUrl }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Response status: ${response.status}`);
       }
+
+      const json = await response.json();
+      if (json.error) {
+        throw new Error(json.error);
+      }
+
+      setToonkorUrl(inputUrl);
+      setSuccess(true);
+    } catch (error: any) {
+      setErrorMessage(error.message);
+      setSuccess(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputUrlChange = (input: string) => {
+    setInputUrl(input);
+    setErrorMessage('');
+    setSuccess(false);
+  };
 
   return (
     <Drawer
       opened={settingsOpened}
       onClose={closeSettings}
       position="right"
-      closeButtonProps={{
-        iconSize: '35',
-        radius: '30',
-      }}
+      closeButtonProps={{ iconSize: '35', radius: '30' }}
     >
       <Title>Settings</Title>
       <Group>
-          <TextInput label="Toonkor URL" value={inputUrl} onChange={setInputUrl} disabled={loading}/>
-          {loading && <Button loading loaderProps={{ type: 'dots' }}>Loading</Button>}
-          {!loading && <Button onClick={sumbmitToonkorUrl}>Save</Button>}
+        <TextInput
+          label="Toonkor URL"
+          value={inputUrl}
+          onChange={(event) => handleInputUrlChange(event.currentTarget.value)}
+          disabled={loading}
+        />
+        <Button onClick={submitToonkorUrl} loading={loading} loaderProps={{ type: 'dots' }}>
+          {loading ? 'Loading' : 'Save'}
+        </Button>
+        {success && <Text c="green">URL saved successfully</Text>}
+        {errorMessage && <Text c="red">{errorMessage}</Text>}
       </Group>
       <Switch
-        label="Auto-fetch Toonkor Url"
+        label="Auto-fetch Toonkor URL"
         labelPosition="left"
-        checked={autoFetchToonkorUrl === true}
+        checked={autoFetchToonkorUrl}
         onChange={(event) => setAutoFetchToonkorUrl(event.currentTarget.checked)}
       />
       <Switch

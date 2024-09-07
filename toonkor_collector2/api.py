@@ -142,7 +142,10 @@ def remove_library(request, manhwa_slug: str):
 def fetch_toonkor_url(request):
     try:
         url = toonkor_api.fetch_toonkor_url()
-        if toonkor_api.set_toonkor_url(url):
+        if toonkor_api.base_url == url:
+            return {'url': url, 'error': ''}
+        elif toonkor_api.set_toonkor_url(url):
+            cached_manhwas.clear()
             return {'url': url, 'error': ''}
         else:
             return {'url': '', 'error': 'Invalid Url'}
@@ -153,7 +156,12 @@ def fetch_toonkor_url(request):
 @api.post("/set_toonkor_url", response=ResponseToonkorUrlSchema)
 def set_toonkor_url(request, data: SetToonkorUrlSchema):
     try:
-        toonkor_api.set_toonkor_url(data.url)
-        return {'url': data.url, 'error': ''}
+        if toonkor_api == data.url:
+            return {'url': data.url, 'error': ''}     
+        elif toonkor_api.set_toonkor_url(data.url):
+            cached_manhwas.clear()
+            return {'url': data.url, 'error': ''}
+        else:
+            return {'url': '', 'error': 'Invalid Url'}
     except Exception as e:
         return {'url': '', 'error': str(e)}
