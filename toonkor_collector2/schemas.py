@@ -32,6 +32,7 @@ class ManhwaSchema(Schema):
     toonkor_url: str = ""
     mangadex_url: str = ""
     thumbnail: str = ""
+    in_library: bool = False
 
     mangadex_id: str = ""
     slug: str
@@ -43,3 +44,12 @@ class ChapterModelSchema(ModelSchema):
     class Meta:
         model = Chapter
         fields = ("manhwa", "index", "status")
+
+
+class SetToonkorUrlSchema(Schema):
+    url: str
+
+
+class ResponseToonkorUrlSchema(Schema):
+    url: str
+    error: str

@@ -18,7 +18,7 @@ class ToonkorAPI:
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
         }
-        self.base_url = "https://toonkor431.com/"
+        self.base_url = ""
 
     def encode_name(self, name):
         return base64.urlsafe_b64encode(name.encode()).decode().rstrip("=")
@@ -34,6 +34,13 @@ class ToonkorAPI:
         for a_tag in reversed(a_tags):
             if "toonkor" in a_tag.text:
                 return a_tag.text
+            
+    def set_toonkor_url(self, url: str):
+        response = self.client.get(url, headers=self.headers)
+        if response.status_code == 200:
+            toonkor_api.base_url = url
+            return True
+        return False
 
     # Popular
     webtoons_request_path = "/%EC%9B%B9%ED%88%B0"
@@ -129,7 +136,6 @@ class ToonkorAPI:
         date_upload = self.to_date(element.select_one("td.episode__index").text)
 
         return {
-            "url": f"{self.base_url}/{url}",
             "index": index,
             "date_upload": date_upload,
         }

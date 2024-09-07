@@ -17,14 +17,13 @@ Including another URLconf
 from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
-from django.urls import include, path
-# from toonkor_collector2 import views
+from django.urls import path, re_path
+from toonkor_collector2.views import serve_react
 from toonkor_collector2.api import api
 
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", api.urls),
-    # path('', views.LibraryView.as_view(), name='index'),
-    # path('toonkor_collector2/', include('toonkor_collector2.urls')),
+    re_path(r"^(?P<path>.*)$", serve_react, {"document_root": settings.REACT_APP_BUILD_PATH}),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

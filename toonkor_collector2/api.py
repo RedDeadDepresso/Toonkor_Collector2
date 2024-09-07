@@ -1,7 +1,7 @@
 from ninja import NinjaAPI
 from django.forms.models import model_to_dict
 from toonkor_collector2.models import Manhwa
-from toonkor_collector2.schemas import ManhwaModelSchema, ManhwaSchema
+from toonkor_collector2.schemas import ManhwaModelSchema, ManhwaSchema, SetToonkorUrlSchema, ResponseToonkorUrlSchema
 from toonkor_collector2.mangadex_api import mangadex_api
 from toonkor_collector2.toonkor_api import toonkor_api
 
@@ -10,97 +10,155 @@ cached_manhwas = {}
 
 
 def search_database(manhwa_slug: str) -> Manhwa | None:
-    """
-    Search for a Manhwa in the database by slug.
-
-    :param manhwa_slug: The slug of the Manhwa to search for.
-    :return: A Manhwa object if found, otherwise None.
-    """
+    """Search for a Manhwa in the database by slug."""
     try:
-        return Manhwa.objects.get(slug=manhwa_slug)
-    except Manhwa.DoesNotExist:
+        manhwa = Manhwa.objects.get(slug=manhwa_slug)
+        return manhwa
+    except Exception as e:
+        with open("e.txt", "w") as f:
+            f.write(str(e))
+            f.write(manhwa_slug)
         return None
-    
 
-def update_manhwa_from_mangadex(manhwa: dict, manhwa_db: Manhwa):
-    """
-    Update the Manhwa details using Mangadex API if necessary.
 
-    :param manhwa: The Manhwa data dictionary to update.
-    :param manhwa_db: The database instance of the Manhwa to update.
-    """
-    mangadex_search = mangadex_api.search(manhwa["title"])
+def update_manhwa_from_mangadex(manhwa: dict, manhwa_db: Manhwa | None):
+    """Update Manhwa details using Mangadex API if necessary."""
+    mangadex_search = mangadex_api.search(manhwa.get("title"))
     if mangadex_search:
         mangadex_data = mangadex_search[0]
         manhwa.update(mangadex_data)
-    if manhwa_db:
-        manhwa_db.en_title = manhwa.get("en_title", "")
-        manhwa_db.en_description = manhwa.get("en_description", "")
-        manhwa_db.mangadex_id = manhwa.get("mangadex_id", "")
-        manhwa_db.save()
-    if mangadex_search or manhwa_db:
-        manhwa["mangadex_url"] = "https://mangadex.org/title/" + manhwa["mangadex_id"]
+        
+        if manhwa_db:
+            # Update database fields
+            manhwa_db.en_title = manhwa.get("en_title", "")
+            manhwa_db.en_description = manhwa.get("en_description", "")
+            manhwa_db.mangadex_id = manhwa.get("mangadex_id", "")
+            manhwa_db.save()
+        
+        manhwa["mangadex_url"] = f"https://mangadex.org/title/{manhwa.get('mangadex_id')}"
 
 
-def search(manhwa_slug: str) -> dict:
-    """
-    Search for a Manhwa using the cache, database, and Toonkor API.
-
-    :param manhwa_slug: The slug of the Manhwa to search for.
-    :return: A dictionary containing the Manhwa details.
-    """
-    if manhwa_slug in cached_manhwas:
-        return cached_manhwas[manhwa_slug]
-
+def get_manhwa_details(manhwa_slug: str) -> dict:
+    """Get Manhwa details from Toonkor API and update using Mangadex if needed."""
     manhwa = {}
     manhwa_db = search_database(manhwa_slug)
 
-    if manhwa_db:
+    if manhwa_db is not None:
         manhwa = model_to_dict(manhwa_db)
+        manhwa["in_library"] = True
 
     try:
-        # Update manhwa details from Toonkor API
         manhwa.update(toonkor_api.get_manga_details(manhwa_slug))
-
-        # If English title or description is missing, update from Mangadex API
+        # Update from Mangadex if essential fields are missing
         if not all([manhwa.get("en_title"), manhwa.get("en_description"), manhwa.get("mangadex_id")]):
             update_manhwa_from_mangadex(manhwa, manhwa_db)
-
-        cached_manhwas[manhwa_slug] = manhwa
     except Exception as e:
-        print(f"Error searching for manhwa: {e}")
+        print(f"Error fetching details from Toonkor: {e}")
 
     return manhwa
 
 
+def add_manhwa_to_library(manhwa_slug: str) -> bool:
+    """Add a Manhwa to the library from Toonkor and Mangadex details."""
+    try:
+        manhwa_dict = cached_manhwas.get(manhwa_slug, toonkor_api.get_manga_details(manhwa_slug))
+        mangadex_search = mangadex_api.search(manhwa_dict.get('title', ''))
+        
+        if mangadex_search:
+            manhwa_dict.update(mangadex_search[0])
+
+        # Filter out keys not in the Manhwa model fields
+        model_fields = {field.name for field in Manhwa._meta.get_fields()}
+        filtered_data = {key: value for key, value in manhwa_dict.items() if key in model_fields}
+        manhwa, _ = Manhwa.objects.get_or_create(**filtered_data)
+
+        # Download and set the thumbnail
+        img_url = manhwa_dict.get('thumbnail', '')
+        thumbnail_path = toonkor_api.download_thumbnail(manhwa, img_url)
+        if thumbnail_path:
+            manhwa.thumbnail = thumbnail_path
+        manhwa.save()
+
+        # Update cache
+        manhwa_dict["in_library"] = True
+        manhwa_dict["thumbnail"] = thumbnail_path
+        cached_manhwas[manhwa_slug] = manhwa_dict
+        return True
+    except Exception as e:
+        print(f"Error adding Manhwa to library: {e}")
+        return False
+
+
+def remove_manhwa_from_library(manhwa_slug: str) -> bool:
+    """Remove a Manhwa from the library and update the cache."""
+    try:
+        Manhwa.objects.filter(slug=manhwa_slug).delete()
+        if manhwa_slug in cached_manhwas:
+            cached_manhwas[manhwa_slug]["in_library"] = False
+        return True
+    except Exception as e:
+        print(f"Error removing Manhwa from library: {e}")
+        return False
+
+
 @api.get("/library", response=list[ManhwaSchema])
 def library(request):
-    """
-    Retrieve all Manhwa in the library.
-    """
+    """Retrieve all Manhwa in the library."""
     return Manhwa.objects.all()
 
 
-@api.get(path="/library/manhwa", response=ManhwaSchema)
-def library_manhwa(request, manhwa_slug: str):
-    """
-    Retrieve a specific Manhwa by slug from the library.
-    """
-    return search(manhwa_slug)
+@api.get("/manhwa", response=ManhwaSchema)
+def manhwa(request, manhwa_slug: str):
+    """Retrieve a specific Manhwa by slug from the library."""
+    if manhwa_slug in cached_manhwas:
+        return cached_manhwas[manhwa_slug]
+
+    manhwa = get_manhwa_details(manhwa_slug)
+    cached_manhwas[manhwa_slug] = manhwa
+    with open("a.txt", "w") as f:
+        f.write(str(cached_manhwas))
+    return manhwa
 
 
 @api.get("/browse/search", response=list[ManhwaSchema])
 def browse(request, query: str):
-    """
-    Search for Manhwa using Mangadex API and update with Toonkor API.
-    """
-    results = mangadex_api.search(query)
-    return toonkor_api.multi_update_mangadex_search(results)
+    """Search for Manhwa using Mangadex API and update with Toonkor API."""
+    try:
+        results = mangadex_api.search(query)
+        return toonkor_api.multi_update_mangadex_search(results)
+    except Exception as e:
+        print(f"Error browsing Manhwa: {e}")
+        return []
 
 
-@api.get("/browse/manhwa/", response=ManhwaSchema)
-def browse_manhwa(request, manhwa_slug: str):
-    """
-    Browse and retrieve a specific Manhwa by slug.
-    """
-    return search(manhwa_slug)
+@api.get("/add_library", response=bool)
+def add_library(request, manhwa_slug: str):
+    """Add a Manhwa to the library."""
+    return add_manhwa_to_library(manhwa_slug)
+
+
+@api.get("/remove_library", response=bool)
+def remove_library(request, manhwa_slug: str):
+    """Remove a Manhwa from the library."""
+    return remove_manhwa_from_library(manhwa_slug)
+
+
+@api.get("/fetch_toonkor_url", response=ResponseToonkorUrlSchema)
+def fetch_toonkor_url(request):
+    try:
+        url = toonkor_api.fetch_toonkor_url()
+        if toonkor_api.set_toonkor_url(url):
+            return {'url': url, 'error': ''}
+        else:
+            return {'url': '', 'error': 'Invalid Url'}
+    except Exception as e:
+        return {'url': '', 'error': str(e)}
+
+
+@api.post("/set_toonkor_url", response=ResponseToonkorUrlSchema)
+def set_toonkor_url(request, data: SetToonkorUrlSchema):
+    try:
+        toonkor_api.set_toonkor_url(data.url)
+        return {'url': data.url, 'error': ''}
+    except Exception as e:
+        return {'url': '', 'error': str(e)}
