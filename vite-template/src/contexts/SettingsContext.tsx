@@ -41,7 +41,8 @@ export const SettingsProvider = ({ children }: childrenProps) => {
         if (autoFetchToonkorUrl || !toonkorUrl) {
             fetchToonkorUrl();
         }
-    }, []);
+    }, [autoFetchToonkorUrl, toonkorUrl]);
+
 
     return (
         <SettingsContext.Provider value={{

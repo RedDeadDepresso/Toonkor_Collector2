@@ -233,7 +233,7 @@ class ToonkorAPI:
         return output
 
     def get_manga_details(self, slug: str) -> ManhwaSchema:
-        manga_url = f"{self.base_url}/{slug}"
+        manga_url = f"{self.base_url}{slug}"
         response = self.client.get(manga_url, headers=self.headers)
         soup = BeautifulSoup(response.text, "lxml")
         details = self.manga_details_parse(soup)
@@ -243,7 +243,7 @@ class ToonkorAPI:
 
     def get_page_list(self, slug: str, chapter: list[str]):
         slug = slug.replace("-", "_")
-        chapter_url = f"{self.base_url}/{slug}_{chapter}화.html"
+        chapter_url = f"{self.base_url}{slug}_{chapter}화.html"
         response = self.client.get(chapter_url, headers=self.headers)
         soup = BeautifulSoup(response.text, "lxml")
         return self.page_list_parse(soup)

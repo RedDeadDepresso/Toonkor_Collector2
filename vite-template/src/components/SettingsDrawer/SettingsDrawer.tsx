@@ -1,6 +1,6 @@
 import { SettingsContext } from '@/contexts/SettingsContext';
 import { Button, Drawer, Group, Switch, Title } from '@mantine/core';
-import { useContext, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { TextInput } from '@mantine/core';
 import { useInputState } from '@mantine/hooks';
 
@@ -13,7 +13,12 @@ interface settingsDrawerPros {
 const SettingsDrawer = ({ settingsOpened, closeSettings }: settingsDrawerPros) => {
   const { displayEnglish, setDisplayEnglish, colorScheme, setColorScheme, toonkorUrl, setToonkorUrl, autoFetchToonkorUrl, setAutoFetchToonkorUrl } = useContext(SettingsContext);
   const [loading, setLoading] = useState(false);
-  const [inputUrl, setInputUrl] = useInputState<string>(toonkorUrl);
+  console.log("toonkor_url: " + toonkorUrl)
+  const [inputUrl, setInputUrl] = useInputState<string>('');
+
+  useEffect(() => {
+    setInputUrl(toonkorUrl);
+  }, [toonkorUrl]);
 
     const sumbmitToonkorUrl = async() => {
         const apiUrl = "/api/set_toonkor_url";

@@ -14,7 +14,7 @@ const Manhwa = () => {
     const [manhwaData, setManhwaData] = useState<ManhwaData>();
     const{displayEnglish} = useContext(SettingsContext);
     const { data, loading, error, refetch, abort } = useFetch<ManhwaData>(
-        `/api/manhwa?manhwa_slug=${slug}`
+        `/api/manhwa?manhwa_slug=/${slug}`
     );
 
     useEffect(() => {

@@ -15,9 +15,6 @@ def search_database(manhwa_slug: str) -> Manhwa | None:
         manhwa = Manhwa.objects.get(slug=manhwa_slug)
         return manhwa
     except Exception as e:
-        with open("e.txt", "w") as f:
-            f.write(str(e))
-            f.write(manhwa_slug)
         return None
 
 
@@ -115,8 +112,6 @@ def manhwa(request, manhwa_slug: str):
 
     manhwa = get_manhwa_details(manhwa_slug)
     cached_manhwas[manhwa_slug] = manhwa
-    with open("a.txt", "w") as f:
-        f.write(str(cached_manhwas))
     return manhwa
 
 
