@@ -20,3 +20,4 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 toonkor_collector2/media/
+vite-template/node_modules/
