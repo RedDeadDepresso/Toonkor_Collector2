@@ -8,7 +8,7 @@ import SettingsDrawer from '../SettingsDrawer/SettingsDrawer';
 
 interface searchBarProps {
   showSearchBar: boolean;
-  searchPlaceHolder: string
+  searchPlaceHolder?: string
   onSearchChange?: (value: string) => void;
 }
 
@@ -17,7 +17,7 @@ const links = [
   { link: '/browse', label: 'Browse' },
 ];
 
-export function NavBar({ showSearchBar, searchPlaceHolder, onSearchChange = () => {} }: searchBarProps) {
+export function NavBar({ showSearchBar, searchPlaceHolder = '', onSearchChange = () => {} }: searchBarProps) {
   const navigate = useNavigate();
   const [opened, { toggle }] = useDisclosure(false);
   const [settingsOpened, { open: openSettings, close: closeSettings }] = useDisclosure(false);

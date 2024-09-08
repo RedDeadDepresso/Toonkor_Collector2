@@ -30,7 +30,7 @@ export function ManhwaCardsGrid({ data }: ManhwaCardsGridProps) {
         <Image src={manhwaData.thumbnail} />
       </AspectRatio>
       <Text className={classes.title} mx={5} ta="center">
-        {displayEnglish ? manhwaData.en_title : manhwaData.title}
+        {displayEnglish && manhwaData.en_title ? manhwaData.en_title : manhwaData.title}
       </Text>
     </Card>
   ));

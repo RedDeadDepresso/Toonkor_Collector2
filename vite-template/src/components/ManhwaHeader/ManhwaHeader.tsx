@@ -62,8 +62,8 @@ export function ManhwaHeader({ manhwaData }: ManhwaHeaderProps) {
   const {toonkorUrl} = useContext(SettingsContext);
 
   // Determine displayed title and description based on context setting
-  const title = displayEnglish ? manhwaData.en_title : manhwaData.title;
-  const description = displayEnglish
+  const title = displayEnglish && manhwaData.en_title ? manhwaData.en_title : manhwaData.title;
+  const description = displayEnglish && manhwaData.en_description
     ? manhwaData.en_description
     : manhwaData.description;
 

@@ -91,9 +91,10 @@ def get_manhwa_details(manhwa_slug: str) -> dict:
         manhwa["in_library"] = True
 
     try:
-        manhwa.update(toonkor_api.get_manga_details(manhwa_slug, manhwa.get('chapters', dict())))
+        toonkor_details = toonkor_api.get_manga_details(manhwa_slug, manhwa.get('chapters', dict()))
+        manhwa.update(toonkor_details)
         toonkor_chapters_num = len(manhwa['chapters'])
-        if toonkor_chapters_num > manhwa_db.chapters_num:
+        if manhwa_db is not None and toonkor_chapters_num > manhwa_db.chapters_num:
             manhwa_db.chapters_num = toonkor_chapters_num
             manhwa_db.save()
         # Update from Mangadex if essential fields are missing
@@ -175,8 +176,7 @@ def browse(request, query: str):
             toonkor_slug = extract_toonkor_url(query)
             mangadex_id = exract_mangadex_url(query)
             if toonkor_slug is not None:
-                results = [toonkor_api.get_manga_details(toonkor_slug)]
-                return mangadex_api.multi_update_toonkor_search(results)
+                return [get_manhwa_details(toonkor_slug)]
             elif mangadex_id is not None:
                 results = mangadex_api.search_by_id(mangadex_id)
                 return toonkor_api.multi_update_mangadex_search(results)
