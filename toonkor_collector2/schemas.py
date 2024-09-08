@@ -16,9 +16,9 @@ class ManhwaModelSchema(ModelSchema):
 
 
 class ChapterSchema(Schema):
-    index: str
-    date_upload: str
-    status: str = "On Toonkor"
+    index: str | int
+    date_upload: str = ""
+    status: str
 
 
 class ManhwaSchema(Schema):
@@ -29,8 +29,6 @@ class ManhwaSchema(Schema):
     en_title: str = ""
     en_description: str = ""
 
-    toonkor_url: str = ""
-    mangadex_url: str = ""
     thumbnail: str = ""
     in_library: bool = False
 

@@ -19,9 +19,9 @@
 
 .image {
   width: rem(376px);
-  height: rem(356px);
+  height: rem(376px);
+}
 
-  @media (max-width: $mantine-breakpoint-md) {
-    display: none;
-  }
+.linkButton {
+  border: 0;
 }

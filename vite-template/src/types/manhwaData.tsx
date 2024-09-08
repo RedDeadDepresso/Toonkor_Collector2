@@ -11,8 +11,7 @@ interface ManhwaData {
     chapters: Array<ChapterData>
     in_library: boolean
 
-    mangadex_url: string
-    toonkor_url: string
+    mangadex_id: string
     slug: string
 }
 

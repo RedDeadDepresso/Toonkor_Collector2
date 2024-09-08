@@ -14,7 +14,7 @@ import { SettingsContext } from '@/contexts/SettingsContext';
 import { useContext, useState } from 'react';
 import ManhwaData from '@/types/manhwaData';
 import Markdown from 'react-markdown';
-import { IconHeart, IconPhoto } from '@tabler/icons-react';
+import { IconHeart } from '@tabler/icons-react';
 
 // Define props interface
 interface ManhwaHeaderProps {
@@ -35,8 +35,9 @@ const renderLinkButton = (href: string, src: string, label: string) => (
       component="a"
       href={href}
       target="_blank"
-      size={55}
+      size={70}
       aria-label={label}
+      className={classes.linkButton}
     >
       <AspectRatio ratio={192 / 192}>
         <img
@@ -57,8 +58,8 @@ const renderBatotoButton = (title: string) => {
 export function ManhwaHeader({ manhwaData }: ManhwaHeaderProps) {
   const { displayEnglish } = useContext(SettingsContext);
   const initialState = manhwaData.in_library ? LibraryButtonState.ADDED : LibraryButtonState.NOT_ADDED;
-  console.log(manhwaData);
   const [libraryButtonState, setLibraryButtonState] = useState<LibraryButtonState>(initialState);
+  const {toonkorUrl} = useContext(SettingsContext);
 
   // Determine displayed title and description based on context setting
   const title = displayEnglish ? manhwaData.en_title : manhwaData.title;
@@ -136,11 +137,11 @@ export function ManhwaHeader({ manhwaData }: ManhwaHeaderProps) {
         <Image src={manhwaData.thumbnail} className={classes.image} radius="md" m="auto" />
 
         {/* Links Group */}
-        <Group my="md" justify="center">
+        <Group my="md" gap="sm" justify="center">
           {renderLibraryButton(libraryButtonState)}
           {renderBatotoButton(title)}
-          {renderLinkButton(manhwaData.mangadex_url, '/images/mangadex-logo.png', 'Open Mangadex URL')}
-          {renderLinkButton(manhwaData.toonkor_url, '/images/toonkor-logo.png', 'Open Toonkor URL')}
+          {renderLinkButton(`https://mangadex.org/title/${manhwaData.mangadex_id}`, '/images/mangadex-logo.png', 'Open Mangadex URL')}
+          {renderLinkButton(`${toonkorUrl}${manhwaData.slug}`, '/images/toonkor-logo.png', 'Open Toonkor URL')}
         </Group>
 
         {/* Description Section */}

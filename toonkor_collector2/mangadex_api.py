@@ -12,32 +12,53 @@ class MangadexAPI:
         self.base_url = "https://api.mangadex.org"
         self.cached_manhwas = {}
 
-    def search(self, query: str) -> list[ManhwaSchema]:
+    def extract_response(self, response):
         output = []
+
+        # Get the data from the response
+        data = response.json().get("data", [])
+
+        # Check if data is a list or a single object, and convert single objects to a list
+        if isinstance(data, dict):
+            data = [data]
+
+        # Iterate through each result in the data list
+        for result in data:
+            # Extract altTitles from attributes and find the Korean title
+            for alt_title in result["attributes"].get("altTitles", []):
+                if "ko" in alt_title:
+                    korean_title = alt_title["ko"]
+
+                    # Create the temp dictionary with the needed fields
+                    temp = {
+                        "title": korean_title,
+                        "en_title": result["attributes"]["title"].get("en", ""),
+                        "en_description": result["attributes"]["description"].get("en", ""),
+                        "mangadex_id": result["id"]
+                    }
+
+                    # Cache the title and add it to the output list
+                    self.cached_manhwas[korean_title] = temp
+                    output.append(temp)
+                    break  # Exit after finding the first Korean title
+
+        return output
+
+    def search(self, query: str) -> list[ManhwaSchema]:
         if query in self.cached_manhwas:
-            output.append(self.cached_manhwas[query])
-            return output
+            return [self.cached_manhwas[query]]
 
         response = self.client.get(
             f"{self.base_url}/manga", params={"title": query}, headers=self.headers
         )
-        
-        for result in response.json().get("data", []):
-            for alt_title in result["attributes"].get("altTitles", []):
-                if "ko" in alt_title:
-                    korean_title = alt_title["ko"]
-                    temp = {
-                        "title": korean_title,
-                        "en_title": result["attributes"]["title"].get("en", ""),
-                        "en_description": result["attributes"]["description"].get(
-                            "en", ""
-                        ),
-                        "mangadex_id": result["id"]
-                    }
-                    self.cached_manhwas[korean_title] = temp
-                    output.append(temp)
-        return output
+        return self.extract_response(response)
     
+    def search_by_id(self, id: str) -> list[ManhwaSchema]:
+        response = self.client.get(
+            f"{self.base_url}/manga/{id}", headers=self.headers
+        )
+        return self.extract_response(response)
+     
     def update_toonkor_search(self, toonkor_search: dict) -> ManhwaSchema:
         korean_title = toonkor_search["title"]
         if korean_title in self.cached_manhwas:
@@ -49,18 +70,10 @@ class MangadexAPI:
                 params={"title": korean_title},
                 headers=self.headers,
             )
+            results = self.extract_response(response)
+            if results:
+                toonkor_search.update(results[0])
 
-            for result in response.json().get("data", []):
-                for alt_title in result["attributes"].get("altTitles", []):
-                    if alt_title.get("ko") == korean_title:
-                        temp = {
-                            "en_title": result["attributes"].get("title", ""),
-                            "en_description": result["attributes"].get(
-                                "description", ""
-                            ),
-                        }
-                        self.cached_manhwas[korean_title] = temp
-                        toonkor_search.update(temp)
         return toonkor_search
 
     def multi_update_toonkor_search(
@@ -68,7 +81,7 @@ class MangadexAPI:
     ) -> list[ManhwaSchema]:
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = [
-                executor.submit(self.translate_toonkor_search, toonkor_search)
+                executor.submit(self.update_toonkor_search, toonkor_search)
                 for toonkor_search in toonkor_results
             ]
             return [

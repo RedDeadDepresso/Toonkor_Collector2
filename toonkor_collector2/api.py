@@ -1,12 +1,38 @@
+import re
 from ninja import NinjaAPI
 from django.forms.models import model_to_dict
-from toonkor_collector2.models import Manhwa
-from toonkor_collector2.schemas import ManhwaModelSchema, ManhwaSchema, SetToonkorUrlSchema, ResponseToonkorUrlSchema
+from django.core.validators import URLValidator
+from django.core.exceptions import ValidationError
+from toonkor_collector2.models import Manhwa, Chapter
+from toonkor_collector2.schemas import ManhwaModelSchema, ManhwaSchema, SetToonkorUrlSchema, ResponseToonkorUrlSchema, ChapterSchema
 from toonkor_collector2.mangadex_api import mangadex_api
 from toonkor_collector2.toonkor_api import toonkor_api
 
+
 api = NinjaAPI()
 cached_manhwas = {}
+
+
+def is_valid_url(url):
+    validator = URLValidator()
+    try:
+        validator(url)
+        return True
+    except ValidationError:
+        return False
+
+
+def exract_mangadex_url(url):
+    pattern = r'^https?://(www\.)?mangadex\.org/title/([a-f0-9-]+)/?.*$'
+    match = re.match(pattern, url)
+    return match.group(2) if match else None
+
+
+def extract_toonkor_url(url):
+    # Updated pattern to match and capture the full path after the domain
+    pattern = r'^https?://(www\.)?toonkor\d{3}\.com(/[\w%\-가-힣/]+).*$'
+    match = re.match(pattern, url)    
+    return match.group(2) if match else None
 
 
 def search_database(manhwa_slug: str) -> Manhwa | None:
@@ -16,6 +42,27 @@ def search_database(manhwa_slug: str) -> Manhwa | None:
         return manhwa
     except Exception as e:
         return None
+
+
+def database_chapters(manhwa: Manhwa) -> list:
+    chapters_db_dict = dict()
+    try:
+        chapters_db = Chapter.objects.filter(manhwa=manhwa)
+        chapters_db_dict = {str(chapter_db.index): model_to_dict(chapter_db) for chapter_db in chapters_db}
+    except:
+        pass
+    return chapters_db_dict
+    
+    
+def database_chapters_to_list(manhwa: Manhwa, chapters_db: dict):
+    end = manhwa.chapters_num + 1
+    for index in range(1, end):
+        str_index = str(index)
+        if str_index not in chapters_db:
+            chapters_db[str_index] = {'index': index, 'status': 'On Toonkor'}
+    chapters_list = list(chapters_db.values())
+    chapters_list.sort(key=lambda x: x["index"], reverse=True)
+    return chapters_list
 
 
 def update_manhwa_from_mangadex(manhwa: dict, manhwa_db: Manhwa | None):
@@ -32,8 +79,6 @@ def update_manhwa_from_mangadex(manhwa: dict, manhwa_db: Manhwa | None):
             manhwa_db.mangadex_id = manhwa.get("mangadex_id", "")
             manhwa_db.save()
         
-        manhwa["mangadex_url"] = f"https://mangadex.org/title/{manhwa.get('mangadex_id')}"
-
 
 def get_manhwa_details(manhwa_slug: str) -> dict:
     """Get Manhwa details from Toonkor API and update using Mangadex if needed."""
@@ -42,16 +87,23 @@ def get_manhwa_details(manhwa_slug: str) -> dict:
 
     if manhwa_db is not None:
         manhwa = model_to_dict(manhwa_db)
+        manhwa["chapters"] = database_chapters(manhwa_db)
         manhwa["in_library"] = True
 
     try:
-        manhwa.update(toonkor_api.get_manga_details(manhwa_slug))
+        manhwa.update(toonkor_api.get_manga_details(manhwa_slug, manhwa.get('chapters', dict())))
+        toonkor_chapters_num = len(manhwa['chapters'])
+        if toonkor_chapters_num > manhwa_db.chapters_num:
+            manhwa_db.chapters_num = toonkor_chapters_num
+            manhwa_db.save()
         # Update from Mangadex if essential fields are missing
         if not all([manhwa.get("en_title"), manhwa.get("en_description"), manhwa.get("mangadex_id")]):
             update_manhwa_from_mangadex(manhwa, manhwa_db)
     except Exception as e:
         print(f"Error fetching details from Toonkor: {e}")
 
+    if isinstance(manhwa["chapters"], dict):
+        manhwa['chapters'] = database_chapters_to_list(manhwa_db, manhwa['chapters'])
     return manhwa
 
 
@@ -115,10 +167,20 @@ def manhwa(request, manhwa_slug: str):
     return manhwa
 
 
-@api.get("/browse/search", response=list[ManhwaSchema])
+@api.get("/browse/search")
 def browse(request, query: str):
     """Search for Manhwa using Mangadex API and update with Toonkor API."""
     try:
+        if is_valid_url(query):
+            toonkor_slug = extract_toonkor_url(query)
+            mangadex_id = exract_mangadex_url(query)
+            if toonkor_slug is not None:
+                results = [toonkor_api.get_manga_details(toonkor_slug)]
+                return mangadex_api.multi_update_toonkor_search(results)
+            elif mangadex_id is not None:
+                results = mangadex_api.search_by_id(mangadex_id)
+                return toonkor_api.multi_update_mangadex_search(results)
+
         results = mangadex_api.search(query)
         return toonkor_api.multi_update_mangadex_search(results)
     except Exception as e:

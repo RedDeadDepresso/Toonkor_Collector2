@@ -8,6 +8,7 @@ import SettingsDrawer from '../SettingsDrawer/SettingsDrawer';
 
 interface searchBarProps {
   showSearchBar: boolean;
+  searchPlaceHolder: string
   onSearchChange?: (value: string) => void;
 }
 
@@ -16,7 +17,7 @@ const links = [
   { link: '/browse', label: 'Browse' },
 ];
 
-export function NavBar({ showSearchBar, onSearchChange = () => {} }: searchBarProps) {
+export function NavBar({ showSearchBar, searchPlaceHolder, onSearchChange = () => {} }: searchBarProps) {
   const navigate = useNavigate();
   const [opened, { toggle }] = useDisclosure(false);
   const [settingsOpened, { open: openSettings, close: closeSettings }] = useDisclosure(false);
@@ -57,7 +58,7 @@ export function NavBar({ showSearchBar, onSearchChange = () => {} }: searchBarPr
           <TextInput
             leftSection={<IconSearch style={{ width: rem(16), height: rem(16) }} stroke={1.5} />}
             radius="xl"
-            placeholder="Search, Enter Toonkor or Mangadex URL"
+            placeholder={searchPlaceHolder}
             onChange={(event) => onSearchChange(event.target.value)}
             className={classes.search}
           />

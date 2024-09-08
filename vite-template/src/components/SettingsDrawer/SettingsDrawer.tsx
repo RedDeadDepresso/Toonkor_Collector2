@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from 'react';
 import { SettingsContext } from '@/contexts/SettingsContext';
-import { Button, Drawer, Group, Switch, Title, Text, TextInput } from '@mantine/core';
-
+import { Button, Drawer, Group, Stack, Switch, Text, TextInput } from '@mantine/core';
+import classes from '@/components/SettingsDrawer/SettingsDrawer.module.css';
 interface SettingsDrawerProps {
   settingsOpened: boolean;
   closeSettings: () => void;
@@ -68,39 +68,45 @@ const SettingsDrawer = ({ settingsOpened, closeSettings }: SettingsDrawerProps) 
       onClose={closeSettings}
       position="right"
       closeButtonProps={{ iconSize: '35', radius: '30' }}
+      title="Settings"
     >
-      <Title>Settings</Title>
-      <Group>
-        <TextInput
-          label="Toonkor URL"
-          value={inputUrl}
-          onChange={(event) => handleInputUrlChange(event.currentTarget.value)}
-          disabled={loading}
-        />
-        <Button onClick={submitToonkorUrl} loading={loading} loaderProps={{ type: 'dots' }}>
-          {loading ? 'Loading' : 'Save'}
-        </Button>
-        {success && <Text c="green">URL saved successfully</Text>}
-        {errorMessage && <Text c="red">{errorMessage}</Text>}
-      </Group>
+      <Stack>
       <Switch
-        label="Auto-fetch Toonkor URL"
+        label="Dark Mode"
         labelPosition="left"
-        checked={autoFetchToonkorUrl}
-        onChange={(event) => setAutoFetchToonkorUrl(event.currentTarget.checked)}
+        checked={colorScheme === 'dark'}
+        onChange={(event) => setColorScheme(event.currentTarget.checked ? 'dark' : 'light')}
+        classNames={{track: classes.track}}
       />
       <Switch
         label="Display Manhwa Details in English"
         labelPosition="left"
         checked={displayEnglish}
         onChange={(event) => setDisplayEnglish(event.currentTarget.checked)}
+        classNames={{track: classes.track}}
       />
       <Switch
-        label="Dark Mode"
+        label="Auto-fetch Toonkor URL"
         labelPosition="left"
-        checked={colorScheme === 'dark'}
-        onChange={(event) => setColorScheme(event.currentTarget.checked ? 'dark' : 'light')}
+        checked={autoFetchToonkorUrl}
+        onChange={(event) => setAutoFetchToonkorUrl(event.currentTarget.checked)}
+        classNames={{track: classes.track}}
       />
+      <Group justify='space-between'>
+        <TextInput
+          label="Toonkor URL"
+          value={inputUrl}
+          onChange={(event) => handleInputUrlChange(event.currentTarget.value)}
+          disabled={loading}
+          className={classes.input}
+        />
+        <Button onClick={submitToonkorUrl} loading={loading} loaderProps={{ type: 'dots' }} mt="md">
+          {loading ? 'Loading' : 'Save'}
+        </Button>
+        {success && <Text c="green">URL saved successfully</Text>}
+        {errorMessage && <Text c="red">{errorMessage}</Text>}
+      </Group>
+      </Stack>
     </Drawer>
   );
 };

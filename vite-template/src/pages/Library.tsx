@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { ManhwaCardsGrid } from '@/components/ManhwaCardsGrid/ManhwaCardsGrid';
 import ManhwaData from '@/types/manhwaData';
 import { useFetch } from '@mantine/hooks';
 import { LoadingOverlay, Text } from '@mantine/core';
 import { NavBar } from '@/components/NavBar/NavBar';
+import { SettingsContext } from '@/contexts/SettingsContext';
 
 
 const Library = () => {
@@ -13,6 +14,7 @@ const Library = () => {
   );
   const [manhwaList, setManhwaList] = useState<ManhwaData[]>([]);
   document.title = "Library";
+  const {displayEnglish} = useContext(SettingsContext);
 
   // Update manhwaList when data is fetched
   useEffect(() => {
@@ -24,8 +26,9 @@ const Library = () => {
   // Handling search input changes
   const onSearchChange = (value: string) => {
     if (data) {
+      const title = displayEnglish ? 'en_title' : 'title';
       const filtered = data.filter((manhwa) =>
-        manhwa.title.toLowerCase().includes(value.toLowerCase())
+        manhwa[title].toLowerCase().includes(value.toLowerCase())
       );
       setManhwaList(filtered);
     }
@@ -34,8 +37,9 @@ const Library = () => {
   return (
     <>
       <NavBar
-        onSearchChange={onSearchChange}
         showSearchBar={true}
+        searchPlaceHolder='Filter by title'
+        onSearchChange={onSearchChange}
       />
       <LoadingOverlay visible={loading} />
       {error && <Text color="red">{error.message}</Text>}

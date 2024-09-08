@@ -11,6 +11,7 @@ const Browse = () => {
   document.title = "Browse";
 
   const onSearchChange = async (searchQuery: string) => {
+    errorMessage && setErrorMessage('');
     firstRender && setFirstRender(false);
     const url = `/api/browse/search?query=${searchQuery}`;
     try {
@@ -31,7 +32,7 @@ const Browse = () => {
 
   return (
     <>
-      <NavBar onSearchChange={onSearchChange} showSearchBar={true} />
+      <NavBar showSearchBar={true} searchPlaceHolder="Search, Enter Toonkor or Mangadex URL" onSearchChange={onSearchChange}/>
       {firstRender && <Text>Search something...</Text>}
       {manhwaList && <ManhwaCardsGrid data={manhwaList} />}
       {errorMessage && <Text color="red">{errorMessage}</Text>}

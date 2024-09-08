@@ -107,15 +107,18 @@ class ToonkorAPI:
 
     # Details
 
-    def manga_details_parse(self, document) -> dict:
+    def manga_details_parse(self, document, chapters_db=dict()) -> dict:
         title = document.select_one("td.bt_title").text
         author = document.select_one("td.bt_label span.bt_data").text
         description = document.select_one("td.bt_over").text
         thumbnail_url = document.select_one("td.bt_thumb img")["src"]
-        chapters = [
-            self.chapter_from_element(x)
-            for x in document.select(self.chapter_list_selector())
-        ]
+        chapters = []
+        for chapter_elm in document.select(self.chapter_list_selector()):
+            chapter_dict = self.chapter_from_element(chapter_elm)
+            index = chapter_dict["index"]
+            if index in chapters_db:
+                chapter_dict.update(chapters_db[index])
+            chapters.append(chapter_dict)
 
         return {
             "title": title,
@@ -131,13 +134,14 @@ class ToonkorAPI:
         return "table.web_list tr:has(td.content__title)"
 
     def chapter_from_element(self, element) -> dict:
-        url = element.select_one("td.content__title")["data-role"]
+        # url = element.select_one("td.content__title")["data-role"]
         index = re.findall(r"\d+", element.select_one("td.content__title").text)[-1]
         date_upload = self.to_date(element.select_one("td.episode__index").text)
 
         return {
             "index": index,
             "date_upload": date_upload,
+            "status": "On Toonkor"
         }
 
     @staticmethod
@@ -232,12 +236,11 @@ class ToonkorAPI:
                     output.append(result)
         return output
 
-    def get_manga_details(self, slug: str) -> ManhwaSchema:
+    def get_manga_details(self, slug: str, chapters_db=dict()) -> ManhwaSchema:
         manga_url = f"{self.base_url}{slug}"
         response = self.client.get(manga_url, headers=self.headers)
         soup = BeautifulSoup(response.text, "lxml")
-        details = self.manga_details_parse(soup)
-        details["toonkor_url"] = manga_url
+        details = self.manga_details_parse(soup, chapters_db)
         details["slug"] = slug
         return details
 

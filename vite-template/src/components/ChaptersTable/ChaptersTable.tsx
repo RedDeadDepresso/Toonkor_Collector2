@@ -21,11 +21,13 @@ const ChaptersTable = ({ slug, chapters = [] }: ChaptersTableProps) => {
     setSocket(ws);
 
     ws.onopen = () => console.log("Connected to Django server");
+
     ws.onmessage = (e) => {
-      const data = JSON.parse(e.data).progress;
-      const progress = Math.floor(data.current / data.total * 100);
-      console.log(progress);
+      const {current_chapter, progress} = JSON.parse(e.data);
+      console.log(current_chapter);
+      console.log(Math.floor(progress.current / progress.total * 100));
     };
+
     ws.onerror = (e) => console.error('WebSocket error:', e);
     ws.onclose = (e) => {
       if (e.wasClean) {
@@ -81,6 +83,10 @@ const ChaptersTable = ({ slug, chapters = [] }: ChaptersTableProps) => {
     }
   };
 
+  const remove = () => {
+    
+  }
+
   const openToonkorURL = (chapterIndex: string) => {
     if (slug) {
       const chapterSlug = slug.replaceAll('-', '_');
@@ -132,10 +138,10 @@ const ChaptersTable = ({ slug, chapters = [] }: ChaptersTableProps) => {
               <Menu.Item onClick={() => openToonkorURL(chapter.index)} leftSection={<IconWorld style={{ width: rem(14), height: rem(14) }} />}>
                 Toonkor URL
               </Menu.Item>
-              <Menu.Item onClick={openDownloadURL} leftSection={<IconDownload style={{ width: rem(14), height: rem(14) }} />}>
+              <Menu.Item disabled={chapter.status === 'On Toonkor'} onClick={openDownloadURL} leftSection={<IconDownload style={{ width: rem(14), height: rem(14) }} />}>
                 Download URL
               </Menu.Item>
-              <Menu.Item onClick={openTranslationURL} leftSection={<IconLanguage style={{ width: rem(14), height: rem(14) }} />}>
+              <Menu.Item disabled={chapter.status !== 'Translated' } onClick={openTranslationURL} leftSection={<IconLanguage style={{ width: rem(14), height: rem(14) }} />}>
                 Translation URL
               </Menu.Item>
             </Menu.Dropdown>
@@ -149,17 +155,17 @@ const ChaptersTable = ({ slug, chapters = [] }: ChaptersTableProps) => {
     <div>
       <Group justify='end'>
         <Tooltip label="Download">
-        <ActionIcon variant='default'>
+        <ActionIcon variant='default' onClick={download}>
           <IconDownload />
         </ActionIcon>
         </Tooltip>
         <Tooltip label="Download & Translate">
-        <ActionIcon variant='default'>
+        <ActionIcon variant='default' onClick={downloadTranslate}>
           <IconLanguage />
         </ActionIcon>
         </Tooltip>
-        <Tooltip label="Delete">
-        <ActionIcon variant='default'>
+        <Tooltip label="Remove">
+        <ActionIcon variant='default' onClick={remove}>
           <IconTrash />
         </ActionIcon>
         </Tooltip>
