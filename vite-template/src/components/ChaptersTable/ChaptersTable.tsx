@@ -23,6 +23,7 @@ const ChaptersTable = ({ slug, chapters = [] }: ChaptersTableProps) => {
     ws.onopen = () => console.log("Connected to Django server");
 
     ws.onmessage = (e) => {
+      console.log(e);
       const {current_chapter, progress} = JSON.parse(e.data);
       console.log(current_chapter);
       console.log(Math.floor(progress.current / progress.total * 100));
@@ -60,7 +61,7 @@ const ChaptersTable = ({ slug, chapters = [] }: ChaptersTableProps) => {
     if (socket) {
       const msg = {
         task: 'download',
-        slug: slug,
+        slug: `/${slug}`,
         chapters: selection.map((chapter) => chapter.index),
       };
       socket.send(JSON.stringify(msg));
