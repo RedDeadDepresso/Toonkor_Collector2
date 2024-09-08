@@ -1,6 +1,6 @@
 import cx from 'clsx';
 import { useState, useEffect, useContext } from 'react';
-import { Table, Checkbox, ScrollArea, Group, Text, rem, Button, Menu, ActionIcon, Loader, Grid, Flex, Tooltip } from '@mantine/core';
+import { Table, Checkbox, ScrollArea, Group, Text, rem, Button, Menu, ActionIcon, Loader, Grid, Flex, Tooltip, Popover } from '@mantine/core';
 import classes from './ChaptersTable.module.css';
 import ChapterData from '@/types/chapterData';
 import { IconDownload, IconFilter, IconLanguage, IconLink, IconTrash, IconWorld } from '@tabler/icons-react';
@@ -8,13 +8,16 @@ import { SettingsContext } from '@/contexts/SettingsContext';
 
 interface ChaptersTableProps {
   slug: string | undefined;
-  chapters: ChapterData[];
+  chapterDataList: ChapterData[];
 }
 
-const ChaptersTable = ({ slug, chapters = [] }: ChaptersTableProps) => {
+const ChaptersTable = ({ slug, chapterDataList = [] }: ChaptersTableProps) => {
+  const [chapters, setChapters] = useState<ChapterData[]>(chapterDataList);
   const [selection, setSelection] = useState<ChapterData[]>([]);
   const [socket, setSocket] = useState<WebSocket | null>(null);
-  const {toonkorUrl} = useContext(SettingsContext); 
+  const {toonkorUrl} = useContext(SettingsContext);
+  const [downloadedFilter, setDownloadFilter] = useState<boolean>(false);
+  const [translatedFilter, setTranslatedFilter] = useState<boolean>(false);
 
   useEffect(() => {
     const ws = new WebSocket(`ws://127.0.0.1:8000/ws/download_translate/${slug}/`);
@@ -25,7 +28,6 @@ const ChaptersTable = ({ slug, chapters = [] }: ChaptersTableProps) => {
     ws.onmessage = (e) => {
       console.log(e);
       const {current_chapter, progress} = JSON.parse(e.data);
-      console.log(current_chapter);
       console.log(Math.floor(progress.current / progress.total * 100));
     };
 
@@ -42,6 +44,21 @@ const ChaptersTable = ({ slug, chapters = [] }: ChaptersTableProps) => {
       ws.close();
     };
   }, [slug]);
+
+
+  useEffect(() => {
+    if (downloadedFilter) {
+      const downloadedChapters = chapterDataList.filter((chapterData) => chapterData.status === "Downloaded" || chapterData.status === "Translated");
+      setChapters(downloadedChapters);
+    }
+    else if (!downloadedFilter && translatedFilter) {
+      const translatedChapters = chapterDataList.filter((chapterData) => chapterData.status === "Translated");
+      setChapters(translatedChapters);
+    }
+    else if (!downloadedFilter && !translatedFilter) {
+      setChapters(chapterDataList);
+    }
+  }, [downloadedFilter, translatedFilter])
 
   const toggleRow = (chapter: ChapterData) => {
     setSelection((current) =>
@@ -170,11 +187,27 @@ const ChaptersTable = ({ slug, chapters = [] }: ChaptersTableProps) => {
           <IconTrash />
         </ActionIcon>
         </Tooltip>
-        <Tooltip label="Filter">
+        <Popover width={300} trapFocus position="bottom" withArrow shadow="md">
+          <Popover.Target>
+          <Tooltip label="Filter">
         <ActionIcon variant='default'>
           <IconFilter />
         </ActionIcon>
-        </Tooltip>
+        </Tooltip>          
+        </Popover.Target>
+          <Popover.Dropdown>
+          <Checkbox
+            label="Downloaded"
+            checked={downloadedFilter}
+            onChange={(event) => setDownloadFilter(event.currentTarget.checked)}
+          />
+          <Checkbox
+            label="Translated"
+            checked={translatedFilter}
+            onChange={(event) => setTranslatedFilter(event.currentTarget.checked)}
+          />
+          </Popover.Dropdown>
+        </Popover>
       </Group>
       <ScrollArea>
         <Table highlightOnHover miw={800} verticalSpacing="sm">

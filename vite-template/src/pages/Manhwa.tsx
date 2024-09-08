@@ -31,7 +31,7 @@ const Manhwa = () => {
         {error && <Text c="red">{error.message}</Text>}
         <SimpleGrid cols={{ base: 1, md: 2 }}>
             {manhwaData && <ManhwaHeader manhwaData={manhwaData}/>}
-            {manhwaData && <ChaptersTable slug={slug} chapters={manhwaData.chapters}/>} 
+            {manhwaData && <ChaptersTable slug={slug} chapterDataList={manhwaData.chapters}/>} 
         </SimpleGrid>
         </>
     )
