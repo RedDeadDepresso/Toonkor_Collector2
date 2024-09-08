@@ -1,15 +1,17 @@
 import { Group, Burger, TextInput, ActionIcon, Drawer, rem, Title, Switch } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
+import { useDisclosure, useInputState } from '@mantine/hooks';
 import { IconSearch, IconAlphabetKorean, IconSettings } from '@tabler/icons-react';
 import classes from './NavBar.module.css';
 import { useNavigate } from 'react-router-dom';
 import SettingsDrawer from '../SettingsDrawer/SettingsDrawer';
+import { useEffect } from 'react';
 
 
 interface searchBarProps {
   showSearchBar: boolean;
   searchPlaceHolder?: string
   onSearchChange?: (value: string) => void;
+  delaySearchChange?: number
 }
 
 const links = [
@@ -17,11 +19,21 @@ const links = [
   { link: '/browse', label: 'Browse' },
 ];
 
-export function NavBar({ showSearchBar, searchPlaceHolder = '', onSearchChange = () => {} }: searchBarProps) {
+export function NavBar({ showSearchBar, searchPlaceHolder = '', onSearchChange = () => {}, delaySearchChange = 0 }: searchBarProps) {
   const navigate = useNavigate();
   const [opened, { toggle }] = useDisclosure(false);
   const [settingsOpened, { open: openSettings, close: closeSettings }] = useDisclosure(false);
+  const [searchValue, setSearchValue] = useInputState<string>('');
 
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      onSearchChange(searchValue);
+    }, delaySearchChange);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchValue]);
 
   const items = links.map((link) => (
     <a
@@ -59,7 +71,8 @@ export function NavBar({ showSearchBar, searchPlaceHolder = '', onSearchChange =
             leftSection={<IconSearch style={{ width: rem(16), height: rem(16) }} stroke={1.5} />}
             radius="xl"
             placeholder={searchPlaceHolder}
-            onChange={(event) => onSearchChange(event.target.value)}
+            value={searchValue}
+            onChange={setSearchValue}
             className={classes.search}
           />
         )}

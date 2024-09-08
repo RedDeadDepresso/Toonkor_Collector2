@@ -32,7 +32,7 @@ const Browse = () => {
 
   return (
     <>
-      <NavBar showSearchBar={true} searchPlaceHolder="Search, Enter Toonkor or Mangadex URL" onSearchChange={onSearchChange}/>
+      <NavBar showSearchBar={true} searchPlaceHolder="Search, Enter Toonkor or Mangadex URL" onSearchChange={onSearchChange} delaySearchChange={1000}/>
       {firstRender && <Text>Search something...</Text>}
       {manhwaList && <ManhwaCardsGrid data={manhwaList} />}
       {errorMessage && <Text color="red">{errorMessage}</Text>}
