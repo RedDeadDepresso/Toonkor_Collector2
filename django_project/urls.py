@@ -25,5 +25,7 @@ from toonkor_collector2.api import api
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", api.urls),
-    re_path(r"^(?P<path>.*)$", serve_react, {"document_root": settings.REACT_APP_BUILD_PATH}),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Catch-all React route should be last
+urlpatterns += [re_path(r"^(?P<path>.*)$", serve_react)]
