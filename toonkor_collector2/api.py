@@ -65,6 +65,26 @@ def database_chapters_to_list(manhwa: Manhwa, chapters_db: dict):
     return chapters_list
 
 
+def update_cache_chapters(manhwa_slug, chapters: list[str], new_status):
+    try:
+        if cached_manhwas.get(manhwa_slug, {}).get('chapters'):
+            cached_chapters = cached_manhwas[manhwa_slug]['chapters']
+
+            if isinstance(cached_chapters, dict):
+                for chapter in chapters:
+                    if chapter in cached_chapters:
+                        cached_chapters[chapter]['status'] = new_status
+                        
+            elif isinstance(cached_chapters, list):
+                size = len(cached_chapters)
+                last_index = int(cached_chapters[size-1]['index'])
+                for chapter in chapters:
+                    reverse_index = size - int(chapter) + last_index - 1
+                    cached_chapters[reverse_index]['status'] = new_status
+    except:
+        pass
+                            
+
 def update_manhwa_from_mangadex(manhwa: dict, manhwa_db: Manhwa | None):
     """Update Manhwa details using Mangadex API if necessary."""
     mangadex_search = mangadex_api.search(manhwa.get("title"))

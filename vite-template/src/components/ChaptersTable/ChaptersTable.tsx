@@ -116,16 +116,19 @@ const ChaptersTable = ({ slug, chapterDataList = [] }: ChaptersTableProps) => {
   };
 
   const downloadTranslate = () => {
-    if (socket) {
-      const updatedChapters = chapters.map((chapter) =>
-        selection.includes(chapter) ? { ...chapter, status: 'Translating' } : chapter
-      );
-      setChapters(updatedChapters);
+    const updatedChapters = chapterDataList.map((chapter) =>
+      selection.some((selectedChapter) => selectedChapter.index === chapter.index)
+        ? { ...chapter, status: 'Translating' }
+        : chapter
+    );
+    setChapters(updatedChapters);
 
+    if (socket) {
+      const downloadChapters = selection.map((chapter) => chapter.index);
       socket.send(JSON.stringify({
         task: 'download_translate',
-        slug,
-        chapters: selection.map((chapter) => chapter.index),
+        slug: `/${slug}`,
+        chapters: downloadChapters,
       }));
     }
   };

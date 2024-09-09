@@ -3,8 +3,9 @@ import json
 
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
-from toonkor_collector2.models import Manhwa, Chapter
+from toonkor_collector2.models import Manhwa, Chapter, StatusChoices
 from toonkor_collector2.toonkor_api import toonkor_api
+from toonkor_collector2.api import update_cache_chapters
 
 
 class QtConsumer(AsyncWebsocketConsumer):
@@ -52,8 +53,9 @@ class QtConsumer(AsyncWebsocketConsumer):
         chapter_obj = await sync_to_async(Chapter.objects.get)(
             manhwa=manhwa_obj, index=chapter
         )
-        chapter_obj.translated = True
+        chapter_obj.status = StatusChoices.TRANSLATED
         await sync_to_async(chapter_obj.save)()
+        update_cache_chapters(manhwa_slug, [chapter], 'Translated')
 
         await self.channel_layer.group_send(
             f"download_translate_{toonkor_api.encode_name(manhwa_slug)}",
@@ -108,11 +110,12 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
         task = data["task"]
         manhwa_slug = data["slug"]
         chapters = data["chapters"]
-
+                            
         # Start the download process
         download_dict = await self.download_chapters(manhwa_slug, chapters)
 
         if task == "download_translate":
+            update_cache_chapters(manhwa_slug, chapters, 'Translating')
             await self.channel_layer.group_send(
                 "qt",
                 {"type": "send_translation_request", "to_translate": download_dict},
@@ -133,6 +136,7 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
         """
         download_dict = {}
         progress = {"current": 0, "total": len(chapters)}
+        update_cache_chapters(manhwa_slug, chapters, 'Downloading')
 
         try:
             manhwa_obj = await sync_to_async(Manhwa.objects.get)(slug=manhwa_slug)
@@ -144,7 +148,7 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
                     progress["current"] += 1
                     chapter_obj, created = await sync_to_async(
                         Chapter.objects.get_or_create
-                    )(manhwa=manhwa_obj, index=chapter)
+                    )(manhwa=manhwa_obj, index=chapter, status=StatusChoices.DOWNLOADED)
 
                     # Send progress to WebSocket client
                     await self.send_progress(
@@ -162,6 +166,7 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
                         download_dict[manhwa_slug][chapter] = {}
 
                     download_dict[manhwa_slug][chapter]["images_set"] = pages_path
+            update_cache_chapters(manhwa_slug, chapters, 'Downloaded')
 
         except Exception as e:
             # Handle exceptions and maybe log them
