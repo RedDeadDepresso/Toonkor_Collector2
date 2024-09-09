@@ -54,6 +54,14 @@ const renderBatotoButton = (title: string) => {
   return renderLinkButton(batotoLink, '/images/batoto-logo.png', 'Open Batoto URL');
 }
 
+const renderMangadexButton = (manhwaData: ManhwaData) => {
+  const mangadexLink = manhwaData.mangadex_id ? `https://mangadex.org/title/${manhwaData.mangadex_id}` :
+  `https://mangadex.org/search?q=${manhwaData.title}`;
+  console.log(mangadexLink);
+
+  return renderLinkButton(mangadexLink, '/images/mangadex-logo.png', 'Open Mangadex URL')
+}
+
 // Main component function
 export function ManhwaHeader({ manhwaData }: ManhwaHeaderProps) {
   const { displayEnglish } = useContext(SettingsContext);
@@ -140,7 +148,7 @@ export function ManhwaHeader({ manhwaData }: ManhwaHeaderProps) {
         <Group my="md" gap="sm" justify="center">
           {renderLibraryButton(libraryButtonState)}
           {renderBatotoButton(title)}
-          {renderLinkButton(`https://mangadex.org/title/${manhwaData.mangadex_id}`, '/images/mangadex-logo.png', 'Open Mangadex URL')}
+          {renderMangadexButton(manhwaData)}
           {renderLinkButton(`${toonkorUrl}${manhwaData.slug}`, '/images/toonkor-logo.png', 'Open Toonkor URL')}
         </Group>
 

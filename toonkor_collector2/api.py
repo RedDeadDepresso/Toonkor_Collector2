@@ -103,7 +103,7 @@ def get_manhwa_details(manhwa_slug: str) -> dict:
     except Exception as e:
         print(f"Error fetching details from Toonkor: {e}")
 
-    if isinstance(manhwa["chapters"], dict):
+    if isinstance(manhwa.get("chapters"), dict):
         manhwa['chapters'] = database_chapters_to_list(manhwa_db, manhwa['chapters'])
     return manhwa
 

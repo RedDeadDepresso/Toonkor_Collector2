@@ -30,9 +30,9 @@ class Manhwa(models.Model):
 
 
 class StatusChoices(models.TextChoices):
-    ON_TOONKOR = "ON_TOONKOR", "On Toonkor"
-    DOWNLOADED = "DOWNLOADED", "Downloaded"
-    TRANSLATED = "TRANSLATED", "Translated"
+    ON_TOONKOR = "On Toonkor", "On Toonkor"
+    DOWNLOADED = "Downloaded", "Downloaded"
+    TRANSLATED = "Translated", "Translated"
 
 
 class Chapter(models.Model):
