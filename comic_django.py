@@ -332,8 +332,8 @@ class ComicTranslateDjango(ComicTranslate):
     def receive_message(self, message):
         data = json.loads(message)
         restart =  len(self.translation_queue) == 0
-        for manhwa_slug, chapters in data.items():
-            manhwa = self.translation_queue.setdefault(manhwa_slug, Manhwa(manhwa_slug))
+        for toonkor_id, chapters in data.items():
+            manhwa = self.translation_queue.setdefault(toonkor_id, Manhwa(toonkor_id))
             for chapter, details in chapters.items():
                 images_set = details['images_set']
                 manhwa.update_chapter(chapter, images_set=images_set)
@@ -374,7 +374,7 @@ class ComicTranslateDjango(ComicTranslate):
         manhwa.update_chapter(chapter, translated=True)
         progress = manhwa.update_progress()
         reply = json.dumps({'task': 'download_translate', 
-                            'slug': manhwa.name, 
+                            'toonkor_id': manhwa.name, 
                             'chapter': chapter, 
                             'progress': progress})
         self.websocket.sendTextMessage(reply)

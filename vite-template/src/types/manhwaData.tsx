@@ -12,7 +12,7 @@ interface ManhwaData {
     in_library: boolean
 
     mangadex_id: string
-    slug: string
+    toonkor_id: string
 }
 
 export default ManhwaData

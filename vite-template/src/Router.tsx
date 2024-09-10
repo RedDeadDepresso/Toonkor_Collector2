@@ -11,11 +11,11 @@ const router = createBrowserRouter([
     element: <Library />,
   },
   {
-    path: '/manhwa/:slug',
+    path: '/manhwa/:toonkorId',
     element: <Manhwa />,
   },
   {
-    path: '/manhwa/:slug/:chapter/:choice',
+    path: '/manhwa/:toonkorId/:chapter/:choice',
     element: <Chapter />,
   },  
   {

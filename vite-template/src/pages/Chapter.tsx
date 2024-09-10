@@ -14,8 +14,8 @@ const pages = (data: string[]) => {
 }
 
 const Chapter = () => {
-    const {slug, chapter, choice} = useParams();
-    const {data, loading, error} = useFetch<string[]>(`/api/chapter?manhwa_slug=/${slug}&chapter=${chapter}&choice=${choice}`);
+    const {toonkorId, chapter, choice} = useParams();
+    const {data, loading, error} = useFetch<string[]>(`/api/chapter?toonkor_id=/${toonkorId}&chapter=${chapter}&choice=${choice}`);
 
     return (
         <Stack mx="auto" gap={0}>

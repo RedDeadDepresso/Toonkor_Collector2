@@ -53,10 +53,10 @@ class ToonkorAPI:
 
     def popular_manga_from_element(self, element) -> dict:
         title_element = element.select_one("div.section-item-title a h3")
-        slug = element.select_one("div.section-item-title a")["href"]
+        toonkor_id = element.select_one("div.section-item-title a")["href"]
         thumbnail_url = element.select_one("img")["src"]
 
-        return {"title": title_element.text, "slug": slug, "thumbnail": thumbnail_url}
+        return {"title": title_element.text, "toonkor_id": toonkor_id, "thumbnail": thumbnail_url}
 
     def popular_manga_next_page_selector(self) -> Optional[str]:
         return None
@@ -236,17 +236,17 @@ class ToonkorAPI:
                     output.append(result)
         return output
 
-    def get_manga_details(self, slug: str, chapters_db=dict()) -> ManhwaSchema:
-        manga_url = f"{self.base_url}{slug}"
+    def get_manga_details(self, toonkor_id: str, chapters_db=dict()) -> ManhwaSchema:
+        manga_url = f"{self.base_url}{toonkor_id}"
         response = self.client.get(manga_url, headers=self.headers)
         soup = BeautifulSoup(response.text, "lxml")
         details = self.manga_details_parse(soup, chapters_db)
-        details["slug"] = slug
+        details["toonkor_id"] = toonkor_id
         return details
 
-    def get_page_list(self, slug: str, chapter: list[str]):
-        slug = slug.replace("-", "_")
-        chapter_url = f"{self.base_url}{slug}_{chapter}화.html"
+    def get_page_list(self, toonkor_id: str, chapter: list[str]):
+        toonkor_id = toonkor_id.replace("-", "_")
+        chapter_url = f"{self.base_url}{toonkor_id}_{chapter}화.html"
         response = self.client.get(chapter_url, headers=self.headers)
         soup = BeautifulSoup(response.text, "lxml")
         return self.page_list_parse(soup)
@@ -280,7 +280,7 @@ class ToonkorAPI:
             os.makedirs(f"{manhwa.path}/{chapter}", exist_ok=True)
 
             # Get chapter details
-            page_list = self.get_page_list(manhwa.slug, chapter)
+            page_list = self.get_page_list(manhwa.toonkor_id, chapter)
 
             # Download all pages concurrently
             with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -298,7 +298,7 @@ class ToonkorAPI:
             return list(pages_path)
 
         except Exception as e:
-            print(f"Error downloading chapter {chapter} of {manhwa.slug}: {str(e)}")
+            print(f"Error downloading chapter {chapter} of {manhwa.toonkor_id}: {str(e)}")
             return None
 
 

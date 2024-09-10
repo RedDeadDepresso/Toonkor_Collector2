@@ -11,7 +11,7 @@ class ManhwaModelSchema(ModelSchema):
             "en_title",
             "en_description",
             "thumbnail",
-            "slug",
+            "toonkor_id",
         )
 
 
@@ -33,7 +33,7 @@ class ManhwaSchema(Schema):
     in_library: bool = False
 
     mangadex_id: str = ""
-    slug: str
+    toonkor_id: str
 
 
 class ChapterModelSchema(ModelSchema):

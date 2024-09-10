@@ -10,11 +10,11 @@ import { SettingsContext } from "@/contexts/SettingsContext";
 
 
 const Manhwa = () => {
-    const {slug} = useParams<string>();
+    const {toonkorId} = useParams<string>();
     const [manhwaData, setManhwaData] = useState<ManhwaData>();
     const{displayEnglish} = useContext(SettingsContext);
     const { data, loading, error, refetch, abort } = useFetch<ManhwaData>(
-        `/api/manhwa?manhwa_slug=/${slug}`
+        `/api/manhwa?toonkor_id=/${toonkorId}`
     );
 
     useEffect(() => {
@@ -31,7 +31,7 @@ const Manhwa = () => {
         {error && <Text c="red">{error.message}</Text>}
         <SimpleGrid cols={{ base: 1, md: 2 }}>
             {manhwaData && <ManhwaHeader manhwaData={manhwaData}/>}
-            {manhwaData && <ChaptersTable slug={slug} chapterDataList={manhwaData.chapters}/>} 
+            {manhwaData && <ChaptersTable toonkorId={toonkorId} chapterDataList={manhwaData.chapters}/>} 
         </SimpleGrid>
         </>
     )

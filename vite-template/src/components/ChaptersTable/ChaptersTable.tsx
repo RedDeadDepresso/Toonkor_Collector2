@@ -27,11 +27,11 @@ import {
 import { SettingsContext } from '@/contexts/SettingsContext';
 
 interface ChaptersTableProps {
-  slug: string | undefined;
+  toonkorId: string | undefined;
   chapterDataList: ChapterData[];
 }
 
-const ChaptersTable = ({ slug, chapterDataList = [] }: ChaptersTableProps) => {
+const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) => {
   const [chapters, setChapters] = useState<ChapterData[]>(chapterDataList);
   const [selection, setSelection] = useState<ChapterData[]>([]);
   const [socket, setSocket] = useState<WebSocket | null>(null);
@@ -42,7 +42,7 @@ const ChaptersTable = ({ slug, chapterDataList = [] }: ChaptersTableProps) => {
   });
 
   useEffect(() => {
-    const ws = new WebSocket(`ws://127.0.0.1:8000/ws/download_translate/${slug}/`);
+    const ws = new WebSocket(`ws://127.0.0.1:8000/ws/download_translate/${toonkorId}/`);
     setSocket(ws);
 
     ws.onopen = () => console.log('Connected to Django server');
@@ -53,7 +53,7 @@ const ChaptersTable = ({ slug, chapterDataList = [] }: ChaptersTableProps) => {
     };
 
     return () => ws.close();
-  }, [slug]);
+  }, [toonkorId]);
 
   useEffect(() => {
     applyFilters();
@@ -109,7 +109,7 @@ const ChaptersTable = ({ slug, chapterDataList = [] }: ChaptersTableProps) => {
       const downloadChapters = selection.map((chapter) => chapter.index);
       socket.send(JSON.stringify({
         task: 'download',
-        slug: `/${slug}`,
+        toonkor_id: `/${toonkorId}`,
         chapters: downloadChapters,
       }));
     }
@@ -127,7 +127,7 @@ const ChaptersTable = ({ slug, chapterDataList = [] }: ChaptersTableProps) => {
       const downloadChapters = selection.map((chapter) => chapter.index);
       socket.send(JSON.stringify({
         task: 'download_translate',
-        slug: `/${slug}`,
+        toonkor_id: `/${toonkorId}`,
         chapters: downloadChapters,
       }));
     }
@@ -136,16 +136,16 @@ const ChaptersTable = ({ slug, chapterDataList = [] }: ChaptersTableProps) => {
   const remove = () => {};
 
   const openToonkorURL = (chapterIndex: string) => {
-    if (slug) {
-      const chapterSlug = slug.replaceAll('-', '_');
+    if (toonkorId) {
+      const chapterSlug = toonkorId.replaceAll('-', '_');
       const chapterUrl = `${toonkorUrl}/${chapterSlug}_${chapterIndex}화.html`;
       window.open(chapterUrl, '_blank', 'noreferrer');
     }
   };
 
   const openDownloadURL = (chapterIndex: string) => {
-    if (slug) {
-      const chapterUrl = `/manhwa/${slug}/${chapterIndex}/downloaded`
+    if (toonkorId) {
+      const chapterUrl = `/manhwa/${toonkorId}/${chapterIndex}/downloaded`
       window.open(chapterUrl, '_blank', 'noreferrer');
     }
   };

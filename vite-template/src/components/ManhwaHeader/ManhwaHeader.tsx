@@ -78,7 +78,7 @@ export function ManhwaHeader({ manhwaData }: ManhwaHeaderProps) {
   const addToLibrary = async () => {
     try {
       setLibraryButtonState(LibraryButtonState.LOADING);
-      const response = await fetch(`/api/add_library?manhwa_slug=${manhwaData.slug}`);
+      const response = await fetch(`/api/add_library?toonkor_id=${manhwaData.toonkor_id}`);
       const added = await response.json();
       if (added) {
         console.log("Added");
@@ -97,7 +97,7 @@ export function ManhwaHeader({ manhwaData }: ManhwaHeaderProps) {
   const removeFromLibrary = async () => {
     try {
       setLibraryButtonState(LibraryButtonState.LOADING);
-      const response = await fetch(`/api/remove_library?manhwa_slug=${manhwaData.slug}`);
+      const response = await fetch(`/api/remove_library?toonkor_id=${manhwaData.toonkor_id}`);
       const removed = await response.json();
       if (removed) {
         console.log("Removed");
@@ -149,7 +149,7 @@ export function ManhwaHeader({ manhwaData }: ManhwaHeaderProps) {
           {renderLibraryButton(libraryButtonState)}
           {renderBatotoButton(title)}
           {renderMangadexButton(manhwaData)}
-          {renderLinkButton(`${toonkorUrl}${manhwaData.slug}`, '/images/toonkor-logo.png', 'Open Toonkor URL')}
+          {renderLinkButton(`${toonkorUrl}${manhwaData.toonkor_id}`, '/images/toonkor-logo.png', 'Open Toonkor URL')}
         </Group>
 
         {/* Description Section */}

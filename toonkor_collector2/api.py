@@ -37,10 +37,10 @@ def extract_toonkor_url(url):
     return match.group(2) if match else None
 
 
-def search_database(manhwa_slug: str) -> Manhwa | None:
-    """Search for a Manhwa in the database by slug."""
+def search_database(toonkor_id: str) -> Manhwa | None:
+    """Search for a Manhwa in the database by toonkor_id."""
     try:
-        manhwa = Manhwa.objects.get(slug=manhwa_slug)
+        manhwa = Manhwa.objects.get(toonkor_id=toonkor_id)
         return manhwa
     except Exception as e:
         return None
@@ -67,10 +67,10 @@ def database_chapters_to_list(manhwa: Manhwa, chapters_db: dict):
     return chapters_list
 
 
-def update_cache_chapters(manhwa_slug, chapters: list[str], new_status):
+def update_cache_chapters(toonkor_id, chapters: list[str], new_status):
     try:
-        if cached_manhwas.get(manhwa_slug, {}).get('chapters'):
-            cached_chapters = cached_manhwas[manhwa_slug]['chapters']
+        if cached_manhwas.get(toonkor_id, {}).get('chapters'):
+            cached_chapters = cached_manhwas[toonkor_id]['chapters']
 
             if isinstance(cached_chapters, dict):
                 for chapter in chapters:
@@ -102,10 +102,10 @@ def update_manhwa_from_mangadex(manhwa: dict, manhwa_db: Manhwa | None):
             manhwa_db.save()
         
 
-def get_manhwa_details(manhwa_slug: str) -> dict:
+def get_manhwa_details(toonkor_id: str) -> dict:
     """Get Manhwa details from Toonkor API and update using Mangadex if needed."""
     manhwa = {}
-    manhwa_db = search_database(manhwa_slug)
+    manhwa_db = search_database(toonkor_id)
 
     if manhwa_db is not None:
         manhwa = model_to_dict(manhwa_db)
@@ -113,7 +113,7 @@ def get_manhwa_details(manhwa_slug: str) -> dict:
         manhwa["in_library"] = True
 
     try:
-        toonkor_details = toonkor_api.get_manga_details(manhwa_slug, manhwa.get('chapters', dict()))
+        toonkor_details = toonkor_api.get_manga_details(toonkor_id, manhwa.get('chapters', dict()))
         manhwa.update(toonkor_details)
         toonkor_chapters_num = len(manhwa['chapters'])
         if manhwa_db is not None and toonkor_chapters_num > manhwa_db.chapters_num:
@@ -130,10 +130,10 @@ def get_manhwa_details(manhwa_slug: str) -> dict:
     return manhwa
 
 
-def add_manhwa_to_library(manhwa_slug: str) -> bool:
+def add_manhwa_to_library(toonkor_id: str) -> bool:
     """Add a Manhwa to the library from Toonkor and Mangadex details."""
     try:
-        manhwa_dict = cached_manhwas.get(manhwa_slug, toonkor_api.get_manga_details(manhwa_slug))
+        manhwa_dict = cached_manhwas.get(toonkor_id, toonkor_api.get_manga_details(toonkor_id))
         mangadex_search = mangadex_api.search(manhwa_dict.get('title', ''))
         
         if mangadex_search:
@@ -154,19 +154,19 @@ def add_manhwa_to_library(manhwa_slug: str) -> bool:
         # Update cache
         manhwa_dict["in_library"] = True
         manhwa_dict["thumbnail"] = thumbnail_path
-        cached_manhwas[manhwa_slug] = manhwa_dict
+        cached_manhwas[toonkor_id] = manhwa_dict
         return True
     except Exception as e:
         print(f"Error adding Manhwa to library: {e}")
         return False
 
 
-def remove_manhwa_from_library(manhwa_slug: str) -> bool:
+def remove_manhwa_from_library(toonkor_id: str) -> bool:
     """Remove a Manhwa from the library and update the cache."""
     try:
-        Manhwa.objects.filter(slug=manhwa_slug).delete()
-        if manhwa_slug in cached_manhwas:
-            cached_manhwas[manhwa_slug]["in_library"] = False
+        Manhwa.objects.filter(toonkor_id=toonkor_id).delete()
+        if toonkor_id in cached_manhwas:
+            cached_manhwas[toonkor_id]["in_library"] = False
         return True
     except Exception as e:
         print(f"Error removing Manhwa from library: {e}")
@@ -180,13 +180,13 @@ def library(request):
 
 
 @api.get("/manhwa", response=ManhwaSchema)
-def manhwa(request, manhwa_slug: str):
-    """Retrieve a specific Manhwa by slug from the library."""
-    if manhwa_slug in cached_manhwas:
-        return cached_manhwas[manhwa_slug]
+def manhwa(request, toonkor_id: str):
+    """Retrieve a specific Manhwa by toonkor_id from the library."""
+    if toonkor_id in cached_manhwas:
+        return cached_manhwas[toonkor_id]
 
-    manhwa = get_manhwa_details(manhwa_slug)
-    cached_manhwas[manhwa_slug] = manhwa
+    manhwa = get_manhwa_details(toonkor_id)
+    cached_manhwas[toonkor_id] = manhwa
     return manhwa
 
 
@@ -211,15 +211,15 @@ def browse(request, query: str):
 
 
 @api.get("/add_library", response=bool)
-def add_library(request, manhwa_slug: str):
+def add_library(request, toonkor_id: str):
     """Add a Manhwa to the library."""
-    return add_manhwa_to_library(manhwa_slug)
+    return add_manhwa_to_library(toonkor_id)
 
 
 @api.get("/remove_library", response=bool)
-def remove_library(request, manhwa_slug: str):
+def remove_library(request, toonkor_id: str):
     """Remove a Manhwa from the library."""
-    return remove_manhwa_from_library(manhwa_slug)
+    return remove_manhwa_from_library(toonkor_id)
 
 
 @api.get("/fetch_toonkor_url", response=ResponseToonkorUrlSchema)
@@ -259,8 +259,8 @@ def is_page(file):
 
 
 @api.get("/chapter", response=list[str])
-def chapter(request, manhwa_slug, chapter, choice):
-    manhwa = get_object_or_404(Manhwa, slug=manhwa_slug)
+def chapter(request, toonkor_id, chapter, choice):
+    manhwa = get_object_or_404(Manhwa, toonkor_id=toonkor_id)
     chapter_db = get_object_or_404(Chapter, manhwa=manhwa, index=chapter)
     if choice == 'downloaded':
         pages_path = chapter_db.downloaded_path

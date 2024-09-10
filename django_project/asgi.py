@@ -8,7 +8,7 @@ from toonkor_collector2.consumers import DownloadTranslateConsumer, QtConsumer
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_project.settings")
 
 websocket_urlpatterns = [
-    path('ws/download_translate/<str:manhwa_slug>/', DownloadTranslateConsumer.as_asgi()),
+    path('ws/download_translate/<str:toonkor_id>/', DownloadTranslateConsumer.as_asgi()),
     path('ws/qt/', QtConsumer.as_asgi()),
 ]
 

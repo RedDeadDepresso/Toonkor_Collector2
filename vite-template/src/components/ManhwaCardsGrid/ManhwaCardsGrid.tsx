@@ -23,8 +23,8 @@ export function ManhwaCardsGrid({ data }: ManhwaCardsGridProps) {
   });
 
   const cards = data.map((manhwaData) => (
-    <Card key={manhwaData.title} p="md" radius="md" component="a" href={`/manhwa${manhwaData.slug}`}
-    onClick={(event) => {event.preventDefault(); navigate(`/manhwa${manhwaData.slug}`)}}
+    <Card key={manhwaData.title} p="md" radius="md" component="a" href={`/manhwa${manhwaData.toonkor_id}`}
+    onClick={(event) => {event.preventDefault(); navigate(`/manhwa${manhwaData.toonkor_id}`)}}
     className={classes.card}>
       <AspectRatio ratio={1920 / 1080}>
         <Image src={manhwaData.thumbnail} />

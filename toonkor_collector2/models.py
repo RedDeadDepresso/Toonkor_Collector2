@@ -14,7 +14,7 @@ class Manhwa(models.Model):
 
     thumbnail = models.ImageField(blank=True)
     mangadex_id = models.CharField(max_length=512, blank=True)
-    slug = models.SlugField(default="")
+    toonkor_id = models.SlugField(default="")
 
     def __str__(self) -> str:
         return self.title
@@ -45,6 +45,7 @@ class StatusChoices(models.TextChoices):
 
 class Chapter(models.Model):
     manhwa = models.ForeignKey(Manhwa, on_delete=models.CASCADE)
+    title = models.CharField(max_length=512, blank=True)
     index = models.IntegerField()
     status = models.CharField(
         max_length=20,
