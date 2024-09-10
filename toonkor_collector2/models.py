@@ -45,13 +45,14 @@ class StatusChoices(models.TextChoices):
 
 class Chapter(models.Model):
     manhwa = models.ForeignKey(Manhwa, on_delete=models.CASCADE)
-    title = models.CharField(max_length=512, blank=True)
     index = models.IntegerField()
     status = models.CharField(
         max_length=20,
         choices=StatusChoices.choices,
         default=StatusChoices.ON_TOONKOR,
     )
+    toonkor_id = models.SlugField(default="")
+    date_upload = models.CharField(max_length=512, blank=True)
 
     def __str__(self) -> str:
         return f"{self.manhwa.title} - Chapter {self.index}"

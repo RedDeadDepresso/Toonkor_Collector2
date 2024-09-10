@@ -25,6 +25,7 @@ import {
   IconWorld,
 } from '@tabler/icons-react';
 import { SettingsContext } from '@/contexts/SettingsContext';
+import { useViewportSize } from '@mantine/hooks';
 
 interface ChaptersTableProps {
   toonkorId: string | undefined;
@@ -40,7 +41,8 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
     downloaded: false,
     translated: false
   });
-
+  const { height } = useViewportSize();
+  
   useEffect(() => {
     const ws = new WebSocket(`ws://127.0.0.1:8000/ws/download_translate/${toonkorId}/`);
     setSocket(ws);
@@ -61,6 +63,7 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
 
   const handleWebSocketMessage = (e: MessageEvent) => {
     const { task, current_chapter, progress } = JSON.parse(e.data);
+    console.log(JSON.parse(e.data));
     
     // Update chapters array immutably
     setChapters(prevChapters => {
@@ -106,11 +109,10 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
     setChapters(updatedChapters);
 
     if (socket) {
-      const downloadChapters = selection.map((chapter) => chapter.index);
       socket.send(JSON.stringify({
         task: 'download',
         toonkor_id: `/${toonkorId}`,
-        chapters: downloadChapters,
+        chapters: selection,
       }));
     }
   };
@@ -124,21 +126,19 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
     setChapters(updatedChapters);
 
     if (socket) {
-      const downloadChapters = selection.map((chapter) => chapter.index);
       socket.send(JSON.stringify({
         task: 'download_translate',
         toonkor_id: `/${toonkorId}`,
-        chapters: downloadChapters,
+        chapters: selection,
       }));
     }
   };
 
   const remove = () => {};
 
-  const openToonkorURL = (chapterIndex: string) => {
+  const openToonkorURL = (chapterId: string) => {
     if (toonkorId) {
-      const chapterSlug = toonkorId.replaceAll('-', '_');
-      const chapterUrl = `${toonkorUrl}/${chapterSlug}_${chapterIndex}화.html`;
+      const chapterUrl = toonkorUrl + chapterId;
       window.open(chapterUrl, '_blank', 'noreferrer');
     }
   };
@@ -152,10 +152,16 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
 
   const openTranslationURL = () => {};
 
-  const rows = chapters.map((chapter) => {
+  const rows = [];
+  for (let i = chapters.length - 1; i >= 0; i--) {
+    const chapter = chapters[i];
     const selected = selection.some((item) => item.index === chapter.index);
-    return (
-      <Table.Tr key={chapter.index} className={cx({ [classes.rowSelected]: selected })}>
+  
+    rows.push(
+      <Table.Tr
+        key={chapter.index}
+        className={cx({ [classes.rowSelected]: selected })}
+      >
         <Table.Td>
           <Checkbox
             checked={selected}
@@ -166,16 +172,20 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
         <Table.Td>
           <Group gap="sm">
             <Text size="sm" fw={500}>
-              {chapter.index}
+              {chapter.index + 1}
             </Text>
           </Group>
         </Table.Td>
         <Table.Td>{chapter.date_upload}</Table.Td>
         <Table.Td>
           <span>
-          {chapter.status === 'Downloading' && <Loader size="sm" color="orange" />}
-          {chapter.status === 'Translating' && <Loader size="sm" color="cyan" />}
-          {chapter.status}
+            {chapter.status === 'Downloading' && (
+              <Loader size="sm" color="orange" />
+            )}
+            {chapter.status === 'Translating' && (
+              <Loader size="sm" color="cyan" />
+            )}
+            {chapter.status}
           </span>
         </Table.Td>
         <Table.Td>
@@ -192,13 +202,13 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
             </Menu.Target>
             <Menu.Dropdown>
               <Menu.Item
-                onClick={() => openToonkorURL(chapter.index)}
+                onClick={() => openToonkorURL(chapter.toonkor_id)}
                 leftSection={<IconWorld style={{ width: rem(14), height: rem(14) }} />}
               >
                 Toonkor URL
               </Menu.Item>
               <Menu.Item
-                disabled={chapter.status === 'On Toonkor'}
+                disabled={chapter.status === 'On Toonkor' || chapter.status === 'Downloading'}
                 onClick={() => openDownloadURL(chapter.index)}
                 leftSection={<IconDownload style={{ width: rem(14), height: rem(14) }} />}
               >
@@ -216,7 +226,7 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
         </Table.Td>
       </Table.Tr>
     );
-  });
+  }  
 
   return (
     <div>
@@ -258,7 +268,7 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
           </Popover.Dropdown>
         </Popover>
       </Group>
-      <ScrollArea>
+      <ScrollArea h={height}>
         <Table highlightOnHover miw={800} verticalSpacing="sm">
           <Table.Thead>
             <Table.Tr>

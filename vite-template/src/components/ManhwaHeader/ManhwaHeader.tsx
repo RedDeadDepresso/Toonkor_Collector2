@@ -15,6 +15,7 @@ import { useContext, useState } from 'react';
 import ManhwaData from '@/types/manhwaData';
 import Markdown from 'react-markdown';
 import { IconHeart } from '@tabler/icons-react';
+import { useViewportSize } from '@mantine/hooks';
 
 // Define props interface
 interface ManhwaHeaderProps {
@@ -68,6 +69,7 @@ export function ManhwaHeader({ manhwaData }: ManhwaHeaderProps) {
   const initialState = manhwaData.in_library ? LibraryButtonState.ADDED : LibraryButtonState.NOT_ADDED;
   const [libraryButtonState, setLibraryButtonState] = useState<LibraryButtonState>(initialState);
   const {toonkorUrl} = useContext(SettingsContext);
+  const { height } = useViewportSize();
 
   // Determine displayed title and description based on context setting
   const title = displayEnglish && manhwaData.en_title ? manhwaData.en_title : manhwaData.title;

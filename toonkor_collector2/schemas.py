@@ -19,6 +19,7 @@ class ChapterSchema(Schema):
     index: str | int
     date_upload: str = ""
     status: str
+    toonkor_id: str = ''
 
 
 class ManhwaSchema(Schema):

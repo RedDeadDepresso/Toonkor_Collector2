@@ -140,21 +140,22 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
 
         try:
             manhwa_obj = await sync_to_async(Manhwa.objects.get)(toonkor_id=toonkor_id)
-            for chapter in chapters:
+            for chapter_dict in chapters:
                 pages_path = await asyncio.to_thread(
-                    toonkor_api.download_chapter, manhwa_obj, chapter
+                    toonkor_api.download_chapter, manhwa_obj, chapter_dict
                 )
                 if pages_path is not None:
                     progress["current"] += 1
                     chapter_obj, created = await sync_to_async(
                         Chapter.objects.get_or_create
-                    )(manhwa=manhwa_obj, index=chapter, status=StatusChoices.DOWNLOADED)
+                    )(manhwa=manhwa_obj, index=chapter_dict['index'], 
+                      toonkor_id=chapter_dict['toonkor_id'], date_upload=chapter_dict['date_upload'], status=StatusChoices.DOWNLOADED)
 
                     # Send progress to WebSocket client
                     await self.send_progress(
                         {
                             "task": "download",
-                            "current_chapter": chapter,
+                            "current_chapter": chapter_dict['index'],
                             "progress": progress,
                         }
                     )
@@ -162,10 +163,10 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
                     # Initialize nested dictionary if not already done
                     if toonkor_id not in download_dict:
                         download_dict[toonkor_id] = {}
-                    if chapter not in download_dict[toonkor_id]:
-                        download_dict[toonkor_id][chapter] = {}
+                    if chapter_dict['index'] not in download_dict[toonkor_id]:
+                        download_dict[toonkor_id][chapter_dict['index']] = {}
 
-                    download_dict[toonkor_id][chapter]["images_set"] = pages_path
+                    download_dict[toonkor_id][chapter_dict['index']]["images_set"] = pages_path
             update_cache_chapters(toonkor_id, chapters, 'Downloaded')
 
         except Exception as e:

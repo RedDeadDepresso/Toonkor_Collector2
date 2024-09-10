@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom"
-import { useFetch } from "@mantine/hooks"
+import { useElementSize, useFetch, useViewportSize } from "@mantine/hooks"
 import { ManhwaHeader } from "@/components/ManhwaHeader/ManhwaHeader";
 import { useContext, useEffect, useState } from "react";
 import ManhwaData from "@/types/manhwaData";
