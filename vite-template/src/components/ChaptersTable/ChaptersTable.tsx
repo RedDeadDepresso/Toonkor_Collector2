@@ -143,7 +143,12 @@ const ChaptersTable = ({ slug, chapterDataList = [] }: ChaptersTableProps) => {
     }
   };
 
-  const openDownloadURL = () => {};
+  const openDownloadURL = (chapterIndex: string) => {
+    if (slug) {
+      const chapterUrl = `/manhwa/${slug}/${chapterIndex}/downloaded`
+      window.open(chapterUrl, '_blank', 'noreferrer');
+    }
+  };
 
   const openTranslationURL = () => {};
 
@@ -194,7 +199,7 @@ const ChaptersTable = ({ slug, chapterDataList = [] }: ChaptersTableProps) => {
               </Menu.Item>
               <Menu.Item
                 disabled={chapter.status === 'On Toonkor'}
-                onClick={openDownloadURL}
+                onClick={() => openDownloadURL(chapter.index)}
                 leftSection={<IconDownload style={{ width: rem(14), height: rem(14) }} />}
               >
                 Download URL

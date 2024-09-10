@@ -1,8 +1,10 @@
 import re
+import os
 from ninja import NinjaAPI
 from django.forms.models import model_to_dict
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
+from django.shortcuts import get_object_or_404
 from toonkor_collector2.models import Manhwa, Chapter
 from toonkor_collector2.schemas import ManhwaModelSchema, ManhwaSchema, SetToonkorUrlSchema, ResponseToonkorUrlSchema, ChapterSchema
 from toonkor_collector2.mangadex_api import mangadex_api
@@ -247,3 +249,28 @@ def set_toonkor_url(request, data: SetToonkorUrlSchema):
             return {'url': '', 'error': 'Invalid Url'}
     except Exception as e:
         return {'url': '', 'error': str(e)}
+
+
+def is_page(file):
+    name, extension = os.path.splitext(file)
+    if name.isdigit() and (extension == '.png' or extension == '.jpeg'):
+        return True
+    return False
+
+
+@api.get("/chapter", response=list[str])
+def chapter(request, manhwa_slug, chapter, choice):
+    manhwa = get_object_or_404(Manhwa, slug=manhwa_slug)
+    chapter_db = get_object_or_404(Chapter, manhwa=manhwa, index=chapter)
+    if choice == 'downloaded':
+        pages_path = chapter_db.downloaded_path
+        media_pages_path = chapter_db.media_downloaded_path
+    elif choice == 'translated':
+        pages_path = chapter_db.translated_path
+        media_pages_path = chapter_db.media_translated_path
+    if os.path.isdir(pages_path):
+        png_files = [f'{media_pages_path}/{file}' for file in os.listdir(pages_path) if is_page(file)]
+        png_files.sort(key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
+        return png_files
+    else:
+        return []

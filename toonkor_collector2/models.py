@@ -1,4 +1,5 @@
 import base64
+import os
 from django.db import models
 
 
@@ -24,6 +25,13 @@ class Manhwa(models.Model):
             return f"toonkor_collector2/media/{self.en_title}"
         else:
             return f"toonkor_collector2/media/{self.encode_name(self.title)}"
+        
+    @property
+    def media_path(self) -> str:
+        if self.en_title:
+            return f"/media/{self.en_title}"
+        else:
+            return f"/media/{self.encode_name(self.title)}"
 
     def encode_name(self, name):
         return base64.urlsafe_b64encode(name.encode()).decode().rstrip("=")
@@ -48,9 +56,17 @@ class Chapter(models.Model):
         return f"{self.manhwa.title} - Chapter {self.index}"
 
     @property
-    def path(self) -> str:
-        return f"toonkor_collector2/{self.manhwa.path}/{self.index}"
+    def downloaded_path(self) -> str:
+        return f"{self.manhwa.path}/{self.index}"
 
     @property
     def translated_path(self) -> str:
-        return f"toonkor_collector2/{self.manhwa.path}/{self.index}/translated"
+        return f"{self.manhwa.path}/{self.index}/translated"
+    
+    @property
+    def media_downloaded_path(self) -> str:
+        return f"{self.manhwa.media_path}/{self.index}"
+
+    @property
+    def media_translated_path(self) -> str:
+        return f"{self.manhwa.media_path}/{self.index}/translated"
