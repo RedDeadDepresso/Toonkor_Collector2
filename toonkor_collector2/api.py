@@ -58,7 +58,7 @@ def database_chapters(manhwa: Manhwa) -> list:
     
 def database_chapters_to_list(chapters_db: dict):
     chapters_list = list(chapters_db.values())
-    chapters_list.sort(key=lambda x: x["index"], reverse=True)
+    chapters_list.sort(key=lambda x: x["index"])
     return chapters_list
 
 
@@ -245,16 +245,17 @@ def set_toonkor_url(request, data: SetToonkorUrlSchema):
     except Exception as e:
         return {'url': '', 'error': str(e)}
 
+image_extensions = {'.png', '.jpeg', '.jpg', '.webp', '.gif', '.svg'}
 
 def is_page(file):
     name, extension = os.path.splitext(file)
-    if name.isdigit() and (extension == '.png' or extension == '.jpeg'):
+    if name.isdigit() and extension in image_extensions:
         return True
     return False
 
 
 @api.get("/chapter", response=list[str])
-def chapter(request, toonkor_id, chapter, choice):
+def chapter(request, toonkor_id: str, chapter: int, choice: str):
     manhwa = get_object_or_404(Manhwa, toonkor_id=toonkor_id)
     chapter_db = get_object_or_404(Chapter, manhwa=manhwa, index=chapter)
     if choice == 'downloaded':
