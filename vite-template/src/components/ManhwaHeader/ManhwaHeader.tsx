@@ -8,6 +8,7 @@ import {
   ScrollArea,
   ActionIcon,
   AspectRatio,
+  rem,
 } from '@mantine/core';
 import classes from './ManhwaHeader.module.css';
 import { SettingsContext } from '@/contexts/SettingsContext';
@@ -15,7 +16,6 @@ import { useContext, useState } from 'react';
 import ManhwaData from '@/types/manhwaData';
 import Markdown from 'react-markdown';
 import { IconHeart } from '@tabler/icons-react';
-import { useViewportSize } from '@mantine/hooks';
 
 // Define props interface
 interface ManhwaHeaderProps {
@@ -69,7 +69,6 @@ export function ManhwaHeader({ manhwaData }: ManhwaHeaderProps) {
   const initialState = manhwaData.in_library ? LibraryButtonState.ADDED : LibraryButtonState.NOT_ADDED;
   const [libraryButtonState, setLibraryButtonState] = useState<LibraryButtonState>(initialState);
   const {toonkorUrl} = useContext(SettingsContext);
-  const { height } = useViewportSize();
 
   // Determine displayed title and description based on context setting
   const title = displayEnglish && manhwaData.en_title ? manhwaData.en_title : manhwaData.title;
@@ -136,7 +135,7 @@ export function ManhwaHeader({ manhwaData }: ManhwaHeaderProps) {
   }
 
   return (
-    <ScrollArea>
+    <ScrollArea h={rem(750)}>
       <Stack>
         {/* Title Section */}
         <Title className={classes.title} m="auto">

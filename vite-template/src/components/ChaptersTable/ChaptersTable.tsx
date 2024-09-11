@@ -25,7 +25,6 @@ import {
   IconWorld,
 } from '@tabler/icons-react';
 import { SettingsContext } from '@/contexts/SettingsContext';
-import { useViewportSize } from '@mantine/hooks';
 
 interface ChaptersTableProps {
   toonkorId: string | undefined;
@@ -41,7 +40,6 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
     downloaded: false,
     translated: false
   });
-  const { height } = useViewportSize();
   
   useEffect(() => {
     const ws = new WebSocket(`ws://127.0.0.1:8000/ws/download_translate/${toonkorId}/`);
@@ -143,14 +141,12 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
     }
   };
 
-  const openDownloadURL = (chapterIndex: string) => {
+  const openLocalURL = (chapterIndex: string, choice: 'downloaded' | 'translated') => {
     if (toonkorId) {
-      const chapterUrl = `/manhwa/${toonkorId}/${chapterIndex}/downloaded`
+      const chapterUrl = `/manhwa/${toonkorId}/${chapterIndex}/${choice}`;
       window.open(chapterUrl, '_blank', 'noreferrer');
     }
   };
-
-  const openTranslationURL = () => {};
 
   const rows = [];
   for (let i = chapters.length - 1; i >= 0; i--) {
@@ -161,6 +157,7 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
       <Table.Tr
         key={chapter.index}
         className={cx({ [classes.rowSelected]: selected })}
+        onClick={() => {toggleRow(chapter)}}
       >
         <Table.Td>
           <Checkbox
@@ -209,14 +206,14 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
               </Menu.Item>
               <Menu.Item
                 disabled={chapter.status === 'On Toonkor' || chapter.status === 'Downloading'}
-                onClick={() => openDownloadURL(chapter.index)}
+                onClick={() => openLocalURL(chapter.index, 'downloaded')}
                 leftSection={<IconDownload style={{ width: rem(14), height: rem(14) }} />}
               >
                 Download URL
               </Menu.Item>
               <Menu.Item
                 disabled={chapter.status !== 'Translated'}
-                onClick={openTranslationURL}
+                onClick={() => openLocalURL(chapter.index, 'translated')}
                 leftSection={<IconLanguage style={{ width: rem(14), height: rem(14) }} />}
               >
                 Translation URL
@@ -268,8 +265,8 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
           </Popover.Dropdown>
         </Popover>
       </Group>
-      <ScrollArea h={height}>
-        <Table highlightOnHover miw={800} verticalSpacing="sm">
+      <ScrollArea h={rem(750)}>
+        <Table highlightOnHover verticalSpacing="sm" stickyHeader>
           <Table.Thead>
             <Table.Tr>
               <Table.Th style={{ width: rem(40) }}>

@@ -1,0 +1,14 @@
+.anchor {
+    position: fixed;
+    bottom: 45px;
+    right: 25px; 
+    cursor: pointer;
+    z-index: 1000;
+    transition: opacity 0.3s ease;
+  }
+  
+.images {
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+}

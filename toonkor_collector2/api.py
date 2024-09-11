@@ -6,7 +6,7 @@ from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from toonkor_collector2.models import Manhwa, Chapter
-from toonkor_collector2.schemas import ManhwaModelSchema, ManhwaSchema, SetToonkorUrlSchema, ResponseToonkorUrlSchema, ChapterSchema
+from toonkor_collector2.schemas import ManhwaSchema, SetToonkorUrlSchema, ResponseToonkorUrlSchema
 from toonkor_collector2.mangadex_api import mangadex_api
 from toonkor_collector2.toonkor_api import toonkor_api
 

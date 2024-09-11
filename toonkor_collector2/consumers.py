@@ -148,8 +148,10 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
                     progress["current"] += 1
                     chapter_obj, created = await sync_to_async(
                         Chapter.objects.get_or_create
-                    )(manhwa=manhwa_obj, index=chapter_dict['index'], 
-                      toonkor_id=chapter_dict['toonkor_id'], date_upload=chapter_dict['date_upload'], status=StatusChoices.DOWNLOADED)
+                    )(manhwa=manhwa_obj, index=chapter_dict['index'],
+                      toonkor_id=chapter_dict['toonkor_id'], date_upload=chapter_dict['date_upload'])
+                    chapter_obj.status = StatusChoices.DOWNLOADED
+                    await sync_to_async(chapter_obj.save)()
 
                     # Send progress to WebSocket client
                     await self.send_progress(

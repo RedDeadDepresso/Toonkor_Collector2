@@ -2,7 +2,7 @@ import { useState, useEffect, useContext } from 'react';
 import { ManhwaCardsGrid } from '@/components/ManhwaCardsGrid/ManhwaCardsGrid';
 import ManhwaData from '@/types/manhwaData';
 import { useFetch } from '@mantine/hooks';
-import { LoadingOverlay, Text } from '@mantine/core';
+import { Center, Loader, Text } from '@mantine/core';
 import { NavBar } from '@/components/NavBar/NavBar';
 import { SettingsContext } from '@/contexts/SettingsContext';
 
@@ -41,7 +41,7 @@ const Library = () => {
         searchPlaceHolder='Filter by title'
         onSearchChange={onSearchChange}
       />
-      <LoadingOverlay visible={loading} />
+      {loading && <Center><Loader color="blue" /></Center>}
       {error && <Text color="red">{error.message}</Text>}
       {manhwaList && <ManhwaCardsGrid data={manhwaList} />}
     </>
