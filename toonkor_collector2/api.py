@@ -248,6 +248,8 @@ def set_toonkor_url(request, data: SetToonkorUrlSchema):
 
 def chapter_from_index(manhwa, index: int) -> ChapterSchema | None:
     try:
+        if index < 0:
+            return None
         return manhwa['chapters'][index]
     except:
         return None
