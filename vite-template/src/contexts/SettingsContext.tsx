@@ -2,6 +2,7 @@ import React, { createContext, useEffect } from 'react';
 import { useLocalStorage } from '@mantine/hooks';
 import SettingsData from '@/types/settingsData';
 import { useMantineColorScheme } from '@mantine/core';
+import readData from '@/types/readData';
 
 interface childrenProps {
     children: React.ReactNode
@@ -20,6 +21,7 @@ export const SettingsProvider = ({ children }: childrenProps) => {
         defaultValue: false,
     });
     const [toonkorUrl, setToonkorUrl] = useLocalStorage({ key: 'toonkor_url', defaultValue: 'https://toonkor434.com' });
+    const [read, setRead] = useLocalStorage<readData>({key: 'read', defaultValue: {}})
 
     const fetchToonkorUrl = async () => {
       try {
@@ -62,7 +64,9 @@ export const SettingsProvider = ({ children }: childrenProps) => {
             autoFetchToonkorUrl,
             setAutoFetchToonkorUrl,
             toonkorUrl,
-            setToonkorUrl
+            setToonkorUrl,
+            read, 
+            setRead
         }}>
             {children}
         </SettingsContext.Provider>

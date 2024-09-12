@@ -37,6 +37,16 @@ class ManhwaSchema(Schema):
     toonkor_id: str
 
 
+class ChapterPaginationSchema(Schema):
+    manhwa_id: str
+    manhwa_title: str
+    manhwa_en_title: str
+    prev_chapter: ChapterSchema | None = None
+    current_chapter: ChapterSchema
+    next_chapter: ChapterSchema | None = None
+    pages: list[str] 
+
+
 class ChapterModelSchema(ModelSchema):
     manhwa: ManhwaSchema | None = None
 

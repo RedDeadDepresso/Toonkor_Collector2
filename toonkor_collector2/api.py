@@ -6,7 +6,7 @@ from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from toonkor_collector2.models import Manhwa, Chapter
-from toonkor_collector2.schemas import ManhwaSchema, SetToonkorUrlSchema, ResponseToonkorUrlSchema
+from toonkor_collector2.schemas import ChapterPaginationSchema, ChapterSchema, ManhwaSchema, SetToonkorUrlSchema, ResponseToonkorUrlSchema
 from toonkor_collector2.mangadex_api import mangadex_api
 from toonkor_collector2.toonkor_api import toonkor_api
 
@@ -54,8 +54,8 @@ def database_chapters(manhwa: Manhwa) -> list:
     except:
         pass
     return chapters_db_dict
-    
-    
+
+
 def database_chapters_to_list(chapters_db: dict):
     chapters_list = list(chapters_db.values())
     chapters_list.sort(key=lambda x: x["index"])
@@ -99,6 +99,9 @@ def update_manhwa_from_mangadex(manhwa: dict, manhwa_db: Manhwa | None):
 
 def get_manhwa_details(toonkor_id: str) -> dict:
     """Get Manhwa details from Toonkor API and update using Mangadex if needed."""
+    if toonkor_id in cached_manhwas:
+        return cached_manhwas[toonkor_id]
+    
     manhwa = {}
     manhwa_db = search_database(toonkor_id)
 
@@ -122,6 +125,8 @@ def get_manhwa_details(toonkor_id: str) -> dict:
 
     if isinstance(manhwa.get("chapters"), dict):
         manhwa['chapters'] = database_chapters_to_list(manhwa['chapters'])
+
+    cached_manhwas[toonkor_id] = manhwa
     return manhwa
 
 
@@ -177,12 +182,7 @@ def library(request):
 @api.get("/manhwa", response=ManhwaSchema)
 def manhwa(request, toonkor_id: str):
     """Retrieve a specific Manhwa by toonkor_id from the library."""
-    if toonkor_id in cached_manhwas:
-        return cached_manhwas[toonkor_id]
-
-    manhwa = get_manhwa_details(toonkor_id)
-    cached_manhwas[toonkor_id] = manhwa
-    return manhwa
+    return get_manhwa_details(toonkor_id)
 
 
 @api.get("/browse/search")
@@ -245,7 +245,16 @@ def set_toonkor_url(request, data: SetToonkorUrlSchema):
     except Exception as e:
         return {'url': '', 'error': str(e)}
 
+
+def chapter_from_index(manhwa, index: int) -> ChapterSchema | None:
+    try:
+        return manhwa['chapters'][index]
+    except:
+        return None
+    
+
 image_extensions = {'.png', '.jpeg', '.jpg', '.webp', '.gif', '.svg'}
+
 
 def is_page(file):
     name, extension = os.path.splitext(file)
@@ -254,10 +263,17 @@ def is_page(file):
     return False
 
 
-@api.get("/chapter", response=list[str])
-def chapter(request, toonkor_id: str, chapter: int, choice: str):
-    manhwa = get_object_or_404(Manhwa, toonkor_id=toonkor_id)
-    chapter_db = get_object_or_404(Chapter, manhwa=manhwa, index=chapter)
+@api.get("/chapter", response=ChapterPaginationSchema)
+def chapter(request, toonkor_id: str, choice: str):
+    chapter_db = get_object_or_404(Chapter, toonkor_id=toonkor_id)
+    manhwa_id = chapter_db.manhwa.toonkor_id
+    manhwa_dict = get_manhwa_details(manhwa_id)
+
+    prev_chapter = chapter_from_index(manhwa_dict, chapter_db.index - 1)
+    current_chapter = chapter_from_index(manhwa_dict, chapter_db.index)
+    next_chapter = chapter_from_index(manhwa_dict, chapter_db.index + 1)
+
+    pages = []
     if choice == 'downloaded':
         pages_path = chapter_db.downloaded_path
         media_pages_path = chapter_db.media_downloaded_path
@@ -265,8 +281,16 @@ def chapter(request, toonkor_id: str, chapter: int, choice: str):
         pages_path = chapter_db.translated_path
         media_pages_path = chapter_db.media_translated_path
     if os.path.isdir(pages_path):
-        png_files = [f'{media_pages_path}/{file}' for file in os.listdir(pages_path) if is_page(file)]
-        png_files.sort(key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
-        return png_files
-    else:
-        return []
+        pages = [f'{media_pages_path}/{file}' for file in os.listdir(pages_path) if is_page(file)]
+        pages.sort(key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
+
+    return {
+        'manhwa_id': manhwa_dict['toonkor_id'],
+        'manhwa_title': manhwa_dict['title'],
+        'manhwa_en_title': manhwa_dict['en_title'],
+        'prev_chapter': prev_chapter,
+        'current_chapter': current_chapter,
+        'next_chapter': next_chapter,
+
+        'pages': pages
+    }

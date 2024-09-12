@@ -15,7 +15,7 @@ const router = createBrowserRouter([
     element: <Manhwa />,
   },
   {
-    path: '/manhwa/:toonkorId/:chapter/:choice',
+    path: '/chapter/:toonkorId/:choice',
     element: <Chapter />,
   },  
   {

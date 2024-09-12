@@ -1,93 +1,76 @@
 import { useFetch, useWindowScroll } from '@mantine/hooks';
 import { useParams } from 'react-router-dom'
-import { Stack, Text, Loader, Center, ActionIcon, Title, Group, Menu, Button, rem } from '@mantine/core';
-import { IconChevronUp, IconDownload, IconLanguage, IconWorld } from '@tabler/icons-react';
+import { Stack, Text, Loader, ActionIcon, Title, Group, Button, Anchor } from '@mantine/core';
+import { IconChevronUp } from '@tabler/icons-react';
 import classes from '@/pages/Chapter.module.css'
 import { NavBar } from '@/components/NavBar/NavBar';
+import MenuLink from '@/components/MenuLinks/MenuLinks';
+import ChapterData from '@/types/chapterData';
+import PaginationData from '@/types/paginationData';
 import { useContext } from 'react';
 import { SettingsContext } from '@/contexts/SettingsContext';
+import { Link } from 'react-router-dom';
 
+const displayTitle = (data: PaginationData, displayEnglish: boolean) => {
+  const title = displayEnglish && data.manhwa_en_title ? data.manhwa_en_title : data.manhwa_title;
+  document.title = title
+  return (
+  <>
+  <Title mx="auto">
+    {title} Chapter {data.current_chapter.index + 1}
+  </Title>
+  <Text mx="auto">
+    All chapters are in <Link to={`/manhwa${data.manhwa_id}`}>{title}</Link>
+  </Text>
+  </>
+  )
+}
 
-const pages = (data: string[]) => {
-    if (data instanceof Array) {
-        return data.map((pagePath: string) => (<img src={pagePath} key={pagePath} className={classes.images}/>))
-    }
-    else {
-        return (<Text c="red">Error</Text>)
-    }
+const paginationButton = (buttonText: string, chapterData: ChapterData) => {
+  if (!chapterData) {
+    return (<Button disabled={true} radius="xl">{buttonText}</Button>)
+  }
+  else {
+    return (<MenuLink chapter={chapterData} position="bottom" newTab={false}>
+              <Button radius="xl">{buttonText}</Button>
+            </MenuLink>)
+  }
+}
+
+const paginationButtonGroup = (paginationData: PaginationData) => {
+  const {prev_chapter, current_chapter, next_chapter} = paginationData;
+  return (
+  <Group justify='space-between' my="md">
+  {paginationButton('< Prev', prev_chapter)}
+  {paginationButton('Current', current_chapter)}
+  {paginationButton('Next >', next_chapter)}
+  </Group>
+  )
+}
+
+const pages = (pages: string[]) => {
+  return pages.map((pagePath: string) => (<img src={pagePath} key={pagePath} className={classes.images}/>))
 }
 
 const Chapter = () => {
-    const {toonkorId, chapter, choice} = useParams();
-    const {data, loading, error} = useFetch<string[]>(`/api/chapter?toonkor_id=/${toonkorId}&chapter=${chapter}&choice=${choice}`);
+    const {toonkorId, choice} = useParams();
+    const {data, loading, error} = useFetch<PaginationData>(`/api/chapter?toonkor_id=/${toonkorId}&choice=${choice}`);
     const [scroll, scrollTo] = useWindowScroll();
-    const {toonkorUrl} = useContext(SettingsContext);
-
-    const openToonkorURL = (chapterId: string | undefined) => {
-        if (toonkorId) {
-          const chapterUrl = toonkorUrl + chapterId;
-          window.open(chapterUrl);
-        }
-      };
-    
-      const openLocalURL = (chapterIndex: string | undefined, choice: 'downloaded' | 'translated') => {
-        if (toonkorId) {
-          const chapterUrl = `/manhwa/${toonkorId}/${chapterIndex}/${choice}`;
-          window.open(chapterUrl);
-        }
-      };
-
-    const otherChapter = () => (
-      <Group justify='space-between'>
-      {['Prev', 'Next'].map((position) => <Menu trigger="hover" position="bottom">
-          <Menu.Target>
-            <Button
-              variant="gradient"
-              size="lg"
-              aria-label="Gradient action icon"
-              gradient={{ from: 'blue', to: 'cyan', deg: 90 }}
-            >
-              {position}
-            </Button>
-          </Menu.Target>
-          <Menu.Dropdown>
-            <Menu.Item
-              onClick={() => openToonkorURL(chapter)}
-              leftSection={<IconWorld style={{ width: rem(14), height: rem(14) }} />}
-            >
-              Toonkor URL
-            </Menu.Item>
-            <Menu.Item
-              onClick={() => openLocalURL(chapter, 'downloaded')}
-              leftSection={<IconDownload style={{ width: rem(14), height: rem(14) }} />}
-            >
-              Download URL
-            </Menu.Item>
-            <Menu.Item
-              onClick={() => openLocalURL(chapter, 'translated')}
-              leftSection={<IconLanguage style={{ width: rem(14), height: rem(14) }} />}
-            >
-              Translation URL
-            </Menu.Item>
-          </Menu.Dropdown>
-        </Menu>
-      )}
-    </Group>
-    )
+    const {displayEnglish} = useContext(SettingsContext);
 
     return (
         <>
         <NavBar showSearchBar={false}/>
-        <Title mx="auto">Chapter {chapter}</Title>
+        {!loading && data && displayTitle(data, displayEnglish)}
+        {loading && <Loader m="auto" color='blue'/>}
         <Stack mx="auto" gap={0}>
-          {otherChapter()}
-            {loading && <Center><Loader color="blue" /></Center>}
-            {error && <Text c="red">{error.message}</Text>}
-            {data && pages(data)}
+          {!loading && data && paginationButtonGroup(data)}
+            {!loading && error && <Text c="red">{error.message}</Text>}
+            {!loading && data && pages(data.pages)}
             {scroll.y !== 0 && <ActionIcon size="lg" radius="lg" className={classes.anchor} onClick={() => scrollTo({ y: 0 })}>
                 <IconChevronUp />
             </ActionIcon>}
-        {otherChapter()}
+          {!loading && data && paginationButtonGroup(data)}
         </Stack>
         </>
     )

@@ -7,8 +7,6 @@ import {
   Group,
   Text,
   rem,
-  Button,
-  Menu,
   ActionIcon,
   Loader,
   Tooltip,
@@ -22,8 +20,8 @@ import {
   IconLanguage,
   IconLink,
   IconTrash,
-  IconWorld,
 } from '@tabler/icons-react';
+import MenuLink from '../MenuLinks/MenuLinks';
 import { SettingsContext } from '@/contexts/SettingsContext';
 
 interface ChaptersTableProps {
@@ -35,11 +33,11 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
   const [chapters, setChapters] = useState<ChapterData[]>(chapterDataList);
   const [selection, setSelection] = useState<ChapterData[]>([]);
   const [socket, setSocket] = useState<WebSocket | null>(null);
-  const { toonkorUrl } = useContext(SettingsContext);
   const [filters, setFilters] = useState({
     downloaded: false,
     translated: false
   });
+  const {read} = useContext(SettingsContext);
   
   useEffect(() => {
     const ws = new WebSocket(`ws://127.0.0.1:8000/ws/download_translate/${toonkorId}/`);
@@ -134,20 +132,6 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
 
   const remove = () => {};
 
-  const openToonkorURL = (chapterId: string) => {
-    if (toonkorId) {
-      const chapterUrl = toonkorUrl + chapterId;
-      window.open(chapterUrl, '_blank', 'noreferrer');
-    }
-  };
-
-  const openLocalURL = (chapterIndex: string, choice: 'downloaded' | 'translated') => {
-    if (toonkorId) {
-      const chapterUrl = `/manhwa/${toonkorId}/${chapterIndex}/${choice}`;
-      window.open(chapterUrl, '_blank', 'noreferrer');
-    }
-  };
-
   const rows = [];
   for (let i = chapters.length - 1; i >= 0; i--) {
     const chapter = chapters[i];
@@ -168,7 +152,7 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
         </Table.Td>
         <Table.Td>
           <Group gap="sm">
-            <Text size="sm" fw={500}>
+            <Text size="sm" fw={500} c={read[chapter.toonkor_id] ? "blue" : undefined}>
               {chapter.index + 1}
             </Text>
           </Group>
@@ -186,8 +170,7 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
           </span>
         </Table.Td>
         <Table.Td>
-          <Menu trigger="hover" position="right">
-            <Menu.Target>
+          <MenuLink chapter={chapter} position='left' newTab={true}>
               <ActionIcon
                 variant="gradient"
                 size="lg"
@@ -196,30 +179,7 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
               >
                 <IconLink />
               </ActionIcon>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Item
-                onClick={() => openToonkorURL(chapter.toonkor_id)}
-                leftSection={<IconWorld style={{ width: rem(14), height: rem(14) }} />}
-              >
-                Toonkor URL
-              </Menu.Item>
-              <Menu.Item
-                disabled={chapter.status === 'On Toonkor' || chapter.status === 'Downloading'}
-                onClick={() => openLocalURL(chapter.index, 'downloaded')}
-                leftSection={<IconDownload style={{ width: rem(14), height: rem(14) }} />}
-              >
-                Download URL
-              </Menu.Item>
-              <Menu.Item
-                disabled={chapter.status !== 'Translated'}
-                onClick={() => openLocalURL(chapter.index, 'translated')}
-                leftSection={<IconLanguage style={{ width: rem(14), height: rem(14) }} />}
-              >
-                Translation URL
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
+          </MenuLink>
         </Table.Td>
       </Table.Tr>
     );

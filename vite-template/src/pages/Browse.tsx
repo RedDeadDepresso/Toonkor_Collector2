@@ -3,9 +3,10 @@ import { ManhwaCardsGrid } from '@/components/ManhwaCardsGrid/ManhwaCardsGrid';
 import ManhwaData from '@/types/manhwaData';
 import { Loader, Text } from '@mantine/core';
 import { NavBar } from '@/components/NavBar/NavBar';
+import { useIsFirstRender } from '@mantine/hooks';
 
 const Browse = () => {
-  const [firstRender, setFirstRender] = useState<boolean>(true);
+  const firstRender = useIsFirstRender();
   const [manhwaList, setManhwaList] = useState<ManhwaData[]>([]);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -17,7 +18,6 @@ const Browse = () => {
     }
     setLoading(true);
     errorMessage && setErrorMessage('');
-    firstRender && setFirstRender(false);
     const url = `/api/browse/search?query=${searchQuery}`;
     try {
       const response = await fetch(url);
@@ -39,9 +39,9 @@ const Browse = () => {
   return (
     <>
       <NavBar showSearchBar={true} searchPlaceHolder="Search, Enter Toonkor or Mangadex URL" onSearchChange={onSearchChange} delaySearchChange={1000}/>
-      {loading && <Loader m="auto" color='cyan'/>}
+      {loading && <Loader m="auto" color='blue'/>}
       {!loading && manhwaList && <ManhwaCardsGrid data={manhwaList} />}
-      {errorMessage && <Text color="red">{errorMessage}</Text>}
+      {errorMessage && <Text c="red">{errorMessage}</Text>}
       {!firstRender && !loading && !manhwaList.length && <Text m="auto">No results were found</Text>}
     </>
   );

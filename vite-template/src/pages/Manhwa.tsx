@@ -20,9 +20,14 @@ const Manhwa = () => {
     useEffect(() => {
         if (data) {
             setManhwaData(data);
-            document.title = displayEnglish && data.en_title ? data.en_title : data.title;
         }
       }, [data]);
+
+      useEffect(() => {
+        if (data) {
+            document.title = displayEnglish && data.en_title ? data.en_title : data.title;
+        }
+      }, [data, displayEnglish]);
       
     return (
         <>
