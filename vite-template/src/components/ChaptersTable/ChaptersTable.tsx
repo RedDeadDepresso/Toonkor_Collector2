@@ -58,16 +58,15 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
   }, [filters]);
 
   const handleWebSocketMessage = (e: MessageEvent) => {
-    const { task, current_chapter, progress } = JSON.parse(e.data);
+    const { chapter_index, chapter_status, progress } = JSON.parse(e.data);
     console.log(JSON.parse(e.data));
     
     // Update chapters array immutably
     setChapters(prevChapters => {
       return prevChapters.map(chapter => {
-        if (chapter.index === current_chapter) {
+        if (chapter.index === chapter_index) {
           // Ensure the chapter's status is correctly updated based on the task
-          if (task === 'download') return { ...chapter, status: 'Downloaded' };
-          if (task === 'download_translate') return { ...chapter, status: 'Translated' };
+          return { ...chapter, status: chapter_status };
         }
         return chapter; // Return the chapter as it is if not updated
       });

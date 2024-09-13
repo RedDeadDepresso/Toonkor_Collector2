@@ -5,7 +5,8 @@ from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from toonkor_collector2.models import Manhwa, Chapter, StatusChoices
 from toonkor_collector2.toonkor_api import toonkor_api
-from toonkor_collector2.api import update_cache_chapters
+from toonkor_collector2.api import update_cached_chapter
+from toonkor_collector2.schemas import DownloadTranslateSchema
 
 
 class QtConsumer(AsyncWebsocketConsumer):
@@ -48,20 +49,20 @@ class QtConsumer(AsyncWebsocketConsumer):
         data = json.loads(text_data)
         toonkor_id = data["toonkor_id"]
         chapter = data["chapter"]
-
         manhwa_obj = await sync_to_async(Manhwa.objects.get)(toonkor_id=toonkor_id)
         chapter_obj = await sync_to_async(Chapter.objects.get)(
             manhwa=manhwa_obj, index=chapter
         )
         chapter_obj.status = StatusChoices.TRANSLATED
         await sync_to_async(chapter_obj.save)()
-        update_cache_chapters(toonkor_id, [chapter], 'Translated')
-
+        update_cached_chapter(toonkor_id, {'index': chapter}, 'Translated')
+        group = f"download_translate_{toonkor_api.encode_name(toonkor_id)}" 
         await self.channel_layer.group_send(
-            f"download_translate_{toonkor_api.encode_name(toonkor_id)}",
+            group,
             {
                 "type": "send_progress",
-                "task": data["task"],
+                "chapter_index": int(chapter),
+                "chapter_status": "Translated",
                 "progress": data["progress"],
             },
         )
@@ -91,9 +92,9 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
         Handles a new WebSocket connection. Adds the connection to the 'download_translate' group
         and accepts the WebSocket connection.
         """
-        self.manhwa_name = self.scope["url_route"]["kwargs"]["toonkor_id"]
+        self.manhwa_id = "/" + self.scope["url_route"]["kwargs"]["toonkor_id"]
         self.group_name = (
-            f"download_translate_{toonkor_api.encode_name(self.manhwa_name)}"
+            f"download_translate_{toonkor_api.encode_name(self.manhwa_id)}"
         )
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
@@ -106,22 +107,20 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
         Args:
             text_data (str): JSON string containing the task, manhwa toonkor_id, and chapters to download.
         """
-        data = json.loads(text_data)
+        data: DownloadTranslateSchema = json.loads(text_data)
         task = data["task"]
-        toonkor_id = data["toonkor_id"]
         chapters = data["chapters"]
-                            
+
         # Start the download process
-        download_dict = await self.download_chapters(toonkor_id, chapters)
+        download_dict = await self.download_chapters(task, chapters)
 
         if task == "download_translate":
-            update_cache_chapters(toonkor_id, chapters, 'Translating')
             await self.channel_layer.group_send(
                 "qt",
                 {"type": "send_translation_request", "to_translate": download_dict},
             )
 
-    async def download_chapters(self, toonkor_id, chapters):
+    async def download_chapters(self, task, chapters):
         """
         Downloads the specified chapters of a manhwa, updates progress, and stores the paths
         to the downloaded images.
@@ -135,11 +134,13 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
             dict: A dictionary containing the paths to the downloaded images for each chapter.
         """
         download_dict = {}
+        new_status = 'Downloaded' if task == 'download' else 'Translating'
         progress = {"current": 0, "total": len(chapters)}
-        update_cache_chapters(toonkor_id, chapters, 'Downloading')
+        for chapter_dict in chapters:
+            update_cached_chapter(self.manhwa_id, chapter_dict, 'Downloading')
 
         try:
-            manhwa_obj = await sync_to_async(Manhwa.objects.get)(toonkor_id=toonkor_id)
+            manhwa_obj = await sync_to_async(Manhwa.objects.get)(toonkor_id=self.manhwa_id)
             for chapter_dict in chapters:
                 pages_path = await asyncio.to_thread(
                     toonkor_api.download_chapter, manhwa_obj, chapter_dict
@@ -154,22 +155,23 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
                     await sync_to_async(chapter_obj.save)()
 
                     # Send progress to WebSocket client
+                    chapter_dict['status'] = new_status
+                    update_cached_chapter(self.manhwa_id, chapter_dict, new_status)
                     await self.send_progress(
                         {
-                            "task": "download",
-                            "current_chapter": chapter_dict['index'],
+                            "chapter_index": chapter_dict['index'],
+                            "chapter_status": chapter_dict['status'],
                             "progress": progress,
                         }
                     )
 
                     # Initialize nested dictionary if not already done
-                    if toonkor_id not in download_dict:
-                        download_dict[toonkor_id] = {}
-                    if chapter_dict['index'] not in download_dict[toonkor_id]:
-                        download_dict[toonkor_id][chapter_dict['index']] = {}
+                    if self.manhwa_id not in download_dict:
+                        download_dict[self.manhwa_id] = {}
+                    if chapter_dict['index'] not in download_dict[self.manhwa_id]:
+                        download_dict[self.manhwa_id][chapter_dict['index']] = {}
 
-                    download_dict[toonkor_id][chapter_dict['index']]["images_set"] = pages_path
-            update_cache_chapters(toonkor_id, chapters, 'Downloaded')
+                    download_dict[self.manhwa_id][chapter_dict['index']]["images_set"] = pages_path
 
         except Exception as e:
             # Handle exceptions and maybe log them

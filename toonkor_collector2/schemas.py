@@ -1,5 +1,6 @@
 from ninja import ModelSchema, Schema
 from toonkor_collector2.models import Manhwa, Chapter
+from typing import Literal
 
 
 class ManhwaModelSchema(ModelSchema):
@@ -62,3 +63,9 @@ class SetToonkorUrlSchema(Schema):
 class ResponseToonkorUrlSchema(Schema):
     url: str
     error: str
+
+
+class DownloadTranslateSchema(Schema):
+    task: Literal["download", "download_translate"]
+    toonkor_id: str
+    chapters: list[int]

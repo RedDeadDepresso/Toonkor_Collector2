@@ -345,7 +345,6 @@ class ComicTranslateDjango(ComicTranslate):
             next_chapter = manhwa.next_chapter()
             if next_chapter is not None:
                 self.translate_chapter(*next_chapter)
-        print("All translations completed.")
 
     def translate_chapter(self, manhwa: Manhwa, chapter: str):
         images_set, translated = manhwa.get_chapter(chapter)
