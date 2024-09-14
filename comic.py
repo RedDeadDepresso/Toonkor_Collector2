@@ -507,6 +507,9 @@ class ComicTranslate(ComicTranslateUI):
                 text_item.itemDeselected.connect(self.on_text_item_deselcted)
                 text_item.textChanged.connect(self.update_text_block_from_item)
 
+            for rect_item in self.image_viewer._rectangles:
+                rect_item.signals.rectangle_changed.connect(self.handle_rectangle_change)
+
         self.clear_text_edits()
 
     def display_image(self, index: int):
@@ -581,8 +584,9 @@ class ComicTranslate(ComicTranslateUI):
     def undo_image(self):
         if self.current_image_index >= 0:
             if any(isinstance(item, TextBlockItem) for item in self.image_viewer._scene.items()):
-                self.image_viewer.clear_text_items()
+                self.image_viewer.clear_text_items(delete=False)
                 self.current_text_block_item = None
+                self.current_text_block = None
                 return
 
             file_path = self.image_files[self.current_image_index]
@@ -695,7 +699,6 @@ class ComicTranslate(ComicTranslateUI):
         self.enable_hbutton_group()
 
     def render_text(self):
-
         if self.image_viewer.hasPhoto() and self.blk_list:
             self.set_tool(None)
             if not font_selected(self):
@@ -703,6 +706,11 @@ class ComicTranslate(ComicTranslateUI):
             self.clear_text_edits()
             self.loading.setVisible(True)
             self.disable_hbutton_group()
+
+            # Add items to the scene if they're not already present
+            for item in self.image_viewer._text_items:
+                if item not in self.image_viewer._scene.items():
+                    self.image_viewer._scene.addItem(item)
 
             existing_text_items = {item.text_block: item for item in self.image_viewer._text_items}
             new_blocks = [blk for blk in self.blk_list if blk not in existing_text_items]
@@ -739,6 +747,9 @@ class ComicTranslate(ComicTranslateUI):
             if do_rectangles_overlap(blk.xyxy, (new_rect.left(), new_rect.top(), new_rect.right(), new_rect.bottom()), 0.2):
                 # Update the TextBlock coordinates
                 blk.xyxy[:] = [new_rect.left(), new_rect.top(), new_rect.right(), new_rect.bottom()]
+                image = self.image_viewer.get_cv2_image()
+                inpaint_bboxes = get_inpaint_bboxes(blk.xyxy, image)
+                blk.inpaint_bboxes = inpaint_bboxes
                 break
 
     def on_font_dropdown_change(self, font_family):
