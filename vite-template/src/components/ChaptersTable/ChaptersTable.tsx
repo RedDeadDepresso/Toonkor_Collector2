@@ -58,20 +58,16 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
   }, [filters]);
 
   const handleWebSocketMessage = (e: MessageEvent) => {
-    const { chapter_index, chapter_status, progress } = JSON.parse(e.data);
-    console.log(JSON.parse(e.data));
-    
-    // Update chapters array immutably
-    setChapters(prevChapters => {
-      return prevChapters.map(chapter => {
-        if (chapter.index === chapter_index) {
-          // Ensure the chapter's status is correctly updated based on the task
-          return { ...chapter, status: chapter_status };
-        }
-        return chapter; // Return the chapter as it is if not updated
-      });
-    });
-  };  
+    const { chapters: updatedChapters } = JSON.parse(e.data);
+    console.log(updatedChapters);
+    for (const chapter of updatedChapters) {
+      const chapterIndex = chapter.index;
+      chapterDataList[chapterIndex].status = chapter.status;
+      };
+
+    const updatedChapterList = [...chapterDataList];
+    setChapters(updatedChapterList);
+  }
 
   const applyFilters = () => {
     if (filters.downloaded) {
@@ -96,13 +92,6 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
   };
 
   const download = () => {
-    const updatedChapters = chapterDataList.map((chapter) =>
-      selection.some((selectedChapter) => selectedChapter.index === chapter.index)
-        ? { ...chapter, status: 'Downloading' }
-        : chapter
-    );
-    setChapters(updatedChapters);
-
     if (socket) {
       socket.send(JSON.stringify({
         task: 'download',
@@ -113,13 +102,6 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
   };
 
   const downloadTranslate = () => {
-    const updatedChapters = chapterDataList.map((chapter) =>
-      selection.some((selectedChapter) => selectedChapter.index === chapter.index)
-        ? { ...chapter, status: 'Translating' }
-        : chapter
-    );
-    setChapters(updatedChapters);
-
     if (socket) {
       socket.send(JSON.stringify({
         task: 'download_translate',

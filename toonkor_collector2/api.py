@@ -12,7 +12,8 @@ from toonkor_collector2.toonkor_api import toonkor_api
 
 
 api = NinjaAPI()
-cached_manhwas = {}
+default_value = ManhwaSchema
+cached_manhwas = dict()
 
 
 def is_valid_url(url):
@@ -62,22 +63,24 @@ def database_chapters_to_list(chapters_db: dict):
     return chapters_list
 
 
-def update_cached_chapter(toonkor_id, chapter_dict: dict, new_status: str):
+def update_cached_chapter(toonkor_id: str, chapter_index: int, new_status: str) -> bool:
     try:
-        if cached_manhwas.get(toonkor_id, {}).get('chapters'):
-            cached_chapters = cached_manhwas[toonkor_id]['chapters']
+        if not cached_manhwas.get(toonkor_id):
+            get_manhwa_details(toonkor_id)
+        
+        cached_chapters = cached_manhwas[toonkor_id]['chapters']
 
-            if isinstance(cached_chapters, dict):
-                if chapter_dict['index'] in cached_chapters:
-                    cached_chapters[chapter_dict['index']]['status'] = new_status
-                        
-            elif isinstance(cached_chapters, list):
-                size = len(cached_chapters)
-                last_index = cached_chapters[size-1]['index']
-                reverse_index = size - int(chapter_dict['index']) + last_index - 1
-                cached_chapters[reverse_index]['status'] = new_status
-    except:
-        pass
+        if isinstance(cached_chapters, dict):
+            if chapter_index in cached_chapters:
+                cached_chapters[chapter_index]['status'] = new_status
+                    
+        elif isinstance(cached_chapters, list):
+            cached_chapters[chapter_index]['status'] = new_status
+
+        return True
+    except Exception as e:
+        print(e)
+        return False
                             
 
 def update_manhwa_from_mangadex(manhwa: dict, manhwa_db: Manhwa | None):

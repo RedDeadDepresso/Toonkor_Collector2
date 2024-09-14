@@ -48,21 +48,20 @@ class QtConsumer(AsyncWebsocketConsumer):
         """
         data = json.loads(text_data)
         toonkor_id = data["toonkor_id"]
-        chapter = data["chapter"]
+        chapter = int(data["chapter"])
         manhwa_obj = await sync_to_async(Manhwa.objects.get)(toonkor_id=toonkor_id)
         chapter_obj = await sync_to_async(Chapter.objects.get)(
             manhwa=manhwa_obj, index=chapter
         )
         chapter_obj.status = StatusChoices.TRANSLATED
         await sync_to_async(chapter_obj.save)()
-        update_cached_chapter(toonkor_id, {'index': chapter}, 'Translated')
+        update_cached_chapter(toonkor_id, chapter, 'Translated')
         group = f"download_translate_{toonkor_api.encode_name(toonkor_id)}" 
         await self.channel_layer.group_send(
             group,
             {
                 "type": "send_progress",
-                "chapter_index": int(chapter),
-                "chapter_status": "Translated",
+                "chapters": [{"index": chapter, "status": "Translated"}],
                 "progress": data["progress"],
             },
         )
@@ -137,7 +136,16 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
         new_status = 'Downloaded' if task == 'download' else 'Translating'
         progress = {"current": 0, "total": len(chapters)}
         for chapter_dict in chapters:
-            update_cached_chapter(self.manhwa_id, chapter_dict, 'Downloading')
+            chapter_dict['status'] = 'Downloading'
+            update_cached_chapter(self.manhwa_id, chapter_dict['index'], 'Downloading')
+        await self.channel_layer.group_send(
+            self.group_name,
+            {
+                "type": "send_progress",
+                "chapters": chapters,
+                "progress": progress,
+            },
+        )
 
         try:
             manhwa_obj = await sync_to_async(Manhwa.objects.get)(toonkor_id=self.manhwa_id)
@@ -156,13 +164,14 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
 
                     # Send progress to WebSocket client
                     chapter_dict['status'] = new_status
-                    update_cached_chapter(self.manhwa_id, chapter_dict, new_status)
-                    await self.send_progress(
+                    update_cached_chapter(self.manhwa_id, chapter_dict['index'], new_status)
+                    await self.channel_layer.group_send(
+                        self.group_name,
                         {
-                            "chapter_index": chapter_dict['index'],
-                            "chapter_status": chapter_dict['status'],
+                            "type": "send_progress",
+                            "chapters": [chapter_dict],
                             "progress": progress,
-                        }
+                        },
                     )
 
                     # Initialize nested dictionary if not already done
