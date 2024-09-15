@@ -22,6 +22,7 @@ class ToonkorAPI:
         toonkor_settings, created = ToonkorSettings.objects.get_or_create(name="general")
         self.base_url = toonkor_settings.url
 
+    # Settings
     def fetch_toonkor_url(self):
         response = self.client.get(self.telegram_url, headers=self.headers)
         soup = BeautifulSoup(response.text, "lxml")
@@ -56,11 +57,6 @@ class ToonkorAPI:
 
         return {"title": title_element.text, "toonkor_id": toonkor_id, "thumbnail": thumbnail_url}
 
-    def popular_manga_next_page_selector(self) -> Optional[str]:
-        return None
-
-    # Latest
-
     latest_request_modifier = "?fil=%EC%B5%9C%EC%8B%A0"
 
     def latest_updates_request(self, page: int) -> str:
@@ -72,11 +68,7 @@ class ToonkorAPI:
     def latest_updates_from_element(self, element) -> dict:
         return self.popular_manga_from_element(element)
 
-    def latest_updates_next_page_selector(self) -> Optional[str]:
-        return self.popular_manga_next_page_selector()
-
     # Search
-
     def search_manga_request(self, page: int, query: str, filters: dict) -> str:
         filter_list = filters or self.get_filter_list()
 
@@ -99,95 +91,7 @@ class ToonkorAPI:
 
     def search_manga_from_element(self, element) -> dict:
         return self.popular_manga_from_element(element)
-
-    def search_manga_next_page_selector(self) -> Optional[str]:
-        return self.popular_manga_next_page_selector()
-
-    # Details
-
-    def manga_details_parse(self, document, toonkor_id, chapters_db=dict()) -> dict:
-        title = document.select_one("td.bt_title").text
-        author = document.select_one("td.bt_label span.bt_data").text
-        description = document.select_one("td.bt_over").text
-        thumbnail_url = document.select_one("td.bt_thumb img")["src"]
-
-        chapters = []
-        chapter_slug = toonkor_id.replace('-', '_')
-        chapter_elm_list = document.select(self.chapter_list_selector())
-
-        for index, chapter_elm in enumerate(reversed(chapter_elm_list)):
-            chapter_dict = self.chapter_from_element(chapter_elm)
-            if index in chapters_db:
-                chapter_dict.update(chapters_db[index])
-            if not chapter_dict['toonkor_id']:
-                chapter_dict['toonkor_id'] = f'{chapter_slug}_{index}화.html`'
-
-            chapter_dict["index"] = index
-            chapters.append(chapter_dict)
-
-        return {
-            "title": title,
-            "author": author,
-            "description": description,
-            "thumbnail": f"{self.base_url}/{thumbnail_url}",
-            "chapters": chapters,
-        }
-
-    # Chapters
-
-    def chapter_list_selector(self) -> str:
-        return "table.web_list tr:has(td.content__title)"
-
-    def chapter_from_element(self, element) -> dict:
-        content_title = element.select_one("td.content__title")
-        date_upload = self.to_date(element.select_one("td.episode__index").text)
-        toonkor_id = content_title.get('data-role', '')
-        return {
-            "date_upload": date_upload,
-            "status": "On Toonkor",
-            "toonkor_id": toonkor_id
-        }
-
-    @staticmethod
-    def to_date(date_str: str) -> int:
-        date_format = "%Y-%m-%d"
-        return timesince(datetime.strptime(date_str, date_format))
-
-    # Pages
-
-    page_list_regex = re.compile(r'src="([^"]*)"')
-
-    def page_list_parse(self, document) -> List[dict]:
-        document = str(document)
-        encoded = re.search(r"toon_img\s*=\s*'(.*?)'", document).group(1)
-        if not encoded:
-            raise Exception("toon_img script not found")
-
-        decoded = base64.b64decode(encoded).decode("utf-8")
-        return [
-            {"index": i, "url": url if url.startswith("http") else self.base_url + url}
-            for i, url in enumerate(self.page_list_regex.findall(decoded))
-        ]
-
-    # Filters
-
-    def get_filter_list(self) -> dict:
-        return {"type": self.get_type_list(), "sort": self.get_sort_list()}
-
-    def get_type_list(self) -> dict:
-        return {
-            "Webtoons": self.webtoons_request_path,
-            "Manga": "/%EB%8B%A8%ED%96%89%EB%B3%B8",
-            "Hentai": "/%EB%A7%9D%EA%B0%80",
-        }
-
-    def get_sort_list(self) -> dict:
-        return {
-            "Popular": "",
-            "Latest": self.latest_request_modifier,
-            "Completed": "/%EC%99%84%EA%B2%B0",
-        }
-
+    
     def search(self, query: str):
         filters = {
             "type": "/%EB%8B%A8%ED%96%89%EB%B3%B8",  # Optional: specify type (e.g., "Manga")
@@ -240,6 +144,35 @@ class ToonkorAPI:
                     output.append(result)
         return output
 
+    # Details
+    def manga_details_parse(self, document, toonkor_id, chapters_db=dict()) -> dict:
+        title = document.select_one("td.bt_title").text
+        author = document.select_one("td.bt_label span.bt_data").text
+        description = document.select_one("td.bt_over").text
+        thumbnail_url = document.select_one("td.bt_thumb img")["src"]
+
+        chapters = []
+        chapter_slug = toonkor_id.replace('-', '_')
+        chapter_elm_list = document.select(self.chapter_list_selector())
+
+        for index, chapter_elm in enumerate(reversed(chapter_elm_list)):
+            chapter_dict = self.chapter_from_element(chapter_elm)
+            if index in chapters_db:
+                chapter_dict.update(chapters_db[index])
+            if not chapter_dict['toonkor_id']:
+                chapter_dict['toonkor_id'] = f'{chapter_slug}_{index}화.html`'
+
+            chapter_dict["index"] = index
+            chapters.append(chapter_dict)
+
+        return {
+            "title": title,
+            "author": author,
+            "description": description,
+            "thumbnail": f"{self.base_url}/{thumbnail_url}",
+            "chapters": chapters,
+        }
+
     def get_manga_details(self, toonkor_id: str, chapters_db=dict()) -> ManhwaSchema:
         manga_url = f"{self.base_url}{toonkor_id}"
         response = self.client.get(manga_url, headers=self.headers)
@@ -248,12 +181,65 @@ class ToonkorAPI:
         details["toonkor_id"] = toonkor_id
         return details
 
+    # Chapters
+    def chapter_list_selector(self) -> str:
+        return "table.web_list tr:has(td.content__title)"
+
+    def chapter_from_element(self, element) -> dict:
+        content_title = element.select_one("td.content__title")
+        date_upload = self.to_date(element.select_one("td.episode__index").text)
+        toonkor_id = content_title.get('data-role', '')
+        return {
+            "date_upload": date_upload,
+            "status": "On Toonkor",
+            "toonkor_id": toonkor_id
+        }
+
+    @staticmethod
+    def to_date(date_str: str) -> int:
+        date_format = "%Y-%m-%d"
+        return timesince(datetime.strptime(date_str, date_format))
+
+    # Pages
+    page_list_regex = re.compile(r'src="([^"]*)"')
+
+    def page_list_parse(self, document) -> List[dict]:
+        document = str(document)
+        encoded = re.search(r"toon_img\s*=\s*'(.*?)'", document).group(1)
+        if not encoded:
+            raise Exception("toon_img script not found")
+
+        decoded = base64.b64decode(encoded).decode("utf-8")
+        return [
+            {"index": i, "url": url if url.startswith("http") else self.base_url + url}
+            for i, url in enumerate(self.page_list_regex.findall(decoded))
+        ]
+
     def get_page_list(self, chapter_id: str):
         chapter_url = f"{self.base_url}{chapter_id}"
         response = self.client.get(chapter_url, headers=self.headers)
         soup = BeautifulSoup(response.text, "lxml")
         return self.page_list_parse(soup)
 
+    # Filters
+    def get_filter_list(self) -> dict:
+        return {"type": self.get_type_list(), "sort": self.get_sort_list()}
+
+    def get_type_list(self) -> dict:
+        return {
+            "Webtoons": self.webtoons_request_path,
+            "Manga": "/%EB%8B%A8%ED%96%89%EB%B3%B8",
+            "Hentai": "/%EB%A7%9D%EA%B0%80",
+        }
+
+    def get_sort_list(self) -> dict:
+        return {
+            "Popular": "",
+            "Latest": self.latest_request_modifier,
+            "Completed": "/%EC%99%84%EA%B2%B0",
+        }
+
+    # Download
     def download_thumbnail(self, manhwa, img_url: str) -> str | None:
         try:
             os.makedirs(manhwa.path, exist_ok=True)
