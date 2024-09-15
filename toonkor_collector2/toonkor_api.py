@@ -8,6 +8,7 @@ import re
 import os
 import concurrent.futures
 from django.utils.timesince import timesince
+from toonkor_collector2.models import ToonkorSettings, encode_name
 from toonkor_collector2.schemas import ManhwaSchema
 
 
@@ -18,14 +19,8 @@ class ToonkorAPI:
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
         }
-        self.base_url = ""
-
-    def encode_name(self, name):
-        return base64.urlsafe_b64encode(name.encode()).decode().rstrip("=")
-
-    def decode_name(self, encoded_name):
-        padded_encoded_name = encoded_name + "=" * (4 - len(encoded_name) % 4)
-        return base64.urlsafe_b64decode(padded_encoded_name).decode()
+        toonkor_settings, created = ToonkorSettings.objects.get_or_create(name="general")
+        self.base_url = toonkor_settings.url
 
     def fetch_toonkor_url(self):
         response = self.client.get(self.telegram_url, headers=self.headers)
@@ -39,6 +34,9 @@ class ToonkorAPI:
         response = self.client.get(url, headers=self.headers)
         if response.status_code == 200:
             toonkor_api.base_url = url
+            toonkor_settings, created = ToonkorSettings.objects.get_or_create(name="general")
+            toonkor_settings.url = url
+            toonkor_settings.save()
             return True
         return False
 
@@ -282,7 +280,7 @@ class ToonkorAPI:
     def download_chapter(self, manhwa_id: str, chapter_dict: dict) -> list[str]:
         try:
             # Create necessary directories
-            manhwa_path = f"toonkor_collector2/media/{self.encode_name(manhwa_id)}"
+            manhwa_path = f"toonkor_collector2/media/{encode_name(manhwa_id)}"
             os.makedirs(f"{manhwa_path}/{chapter_dict['index']}", exist_ok=True)
 
             # Get chapter details
@@ -304,7 +302,7 @@ class ToonkorAPI:
             return list(pages_path)
 
         except Exception as e:
-            print(f"Error downloading chapter {chapter_dict['title']} of {manhwa_id}: {str(e)}")
+            print(f"Error downloading chapter {chapter_dict['index'] + 1} of {manhwa_id}: {str(e)}")
             return None
 
 

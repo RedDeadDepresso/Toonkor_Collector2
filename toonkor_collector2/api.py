@@ -5,7 +5,7 @@ from django.forms.models import model_to_dict
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
-from toonkor_collector2.models import Manhwa, Chapter
+from toonkor_collector2.models import Manhwa, Chapter, ToonkorSettings
 from toonkor_collector2.schemas import ChapterPaginationSchema, ChapterSchema, ManhwaSchema, SetToonkorUrlSchema, ResponseToonkorUrlSchema
 from toonkor_collector2.mangadex_api import mangadex_api
 from toonkor_collector2.toonkor_api import toonkor_api
@@ -213,6 +213,12 @@ def add_library(request, toonkor_id: str):
 def remove_library(request, toonkor_id: str):
     """Remove a Manhwa from the library."""
     return remove_manhwa_from_library(toonkor_id)
+
+
+@api.get("/get_toonkor_url", response=ResponseToonkorUrlSchema)
+def get_toonkor_url(request):
+    toonkor_settings, created = ToonkorSettings.objects.get_or_create(name="general")
+    return {'url': toonkor_settings.url, 'error': ''}
 
 
 @api.get("/fetch_toonkor_url", response=ResponseToonkorUrlSchema)

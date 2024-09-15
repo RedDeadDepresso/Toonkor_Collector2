@@ -23,9 +23,9 @@ export const SettingsProvider = ({ children }: childrenProps) => {
     const [toonkorUrl, setToonkorUrl] = useLocalStorage({ key: 'toonkor_url', defaultValue: 'https://toonkor434.com' });
     const [read, setRead] = useLocalStorage<readData>({key: 'read', defaultValue: {}})
 
-    const fetchToonkorUrl = async () => {
+    const requestUrl = async (apiUrl: string) => {
       try {
-          const response = await fetch('/api/fetch_toonkor_url');
+          const response = await fetch(apiUrl);
           if (!response.ok) {
               throw new Error(`Response status: ${response.status}`);
           }
@@ -33,27 +33,18 @@ export const SettingsProvider = ({ children }: childrenProps) => {
           if (!json.error) {
             setToonkorUrl(json.url);
           }
-          console.log(json);
       } catch (error: any) {
           console.error(error.message);
       }
     };
 
     useEffect(() => {
-        if (!autoFetchToonkorUrl) {
-            fetch('/api/set_toonkor_url', {
-                method: "POST",
-                body: JSON.stringify({url: toonkorUrl})
-            }).then(() => console.log("URL set on server"))
-        }
-    }, [])
+        if (!toonkorUrl) requestUrl("/api/get_toonkor_url")
+    }, [toonkorUrl])
 
     useEffect(() => {
-        if (autoFetchToonkorUrl || !toonkorUrl) {
-            fetchToonkorUrl();
-        }
-    }, [autoFetchToonkorUrl, toonkorUrl]);
-
+        if (autoFetchToonkorUrl) requestUrl("/api/fetch_toonkor_url")
+    }, [autoFetchToonkorUrl])
 
     return (
         <SettingsContext.Provider value={{

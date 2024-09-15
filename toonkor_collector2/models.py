@@ -1,6 +1,16 @@
+import base64
+
 from django.db import models
-from toonkor_collector2.toonkor_api import toonkor_api
 from functools import cached_property
+
+
+def encode_name(name: str):
+    return base64.urlsafe_b64encode(name.encode()).decode().rstrip("=")
+
+
+def decode_name(encoded_name: str):
+    padded_encoded_name = encoded_name + "=" * (4 - len(encoded_name) % 4)
+    return base64.urlsafe_b64decode(padded_encoded_name).decode()
 
 
 # Create your models here.
@@ -20,7 +30,7 @@ class Manhwa(models.Model):
 
     @cached_property
     def media_path(self) -> str:
-        return f"/media/{toonkor_api.encode_name(self.toonkor_id)}"
+        return f"/media/{encode_name(self.toonkor_id)}"
     
     @cached_property
     def path(self) -> str:
@@ -49,7 +59,7 @@ class Chapter(models.Model):
     
     @cached_property
     def manhwa_media_path(self) -> str:
-        return f"/media/{toonkor_api.encode_name(self.manhwa_id)}"
+        return f"/media/{encode_name(self.manhwa_id)}"
     
     @cached_property
     def manhwa_path(self) -> str:
@@ -70,3 +80,8 @@ class Chapter(models.Model):
     @cached_property
     def media_translated_path(self) -> str:
         return f"{self.manhwa_media_path}/{self.index}/translated"
+
+
+class ToonkorSettings(models.Model):
+    name = models.CharField(max_length=512)
+    url = models.URLField(default="https://toonkor434.com")

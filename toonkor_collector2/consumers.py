@@ -4,8 +4,7 @@ import json
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from toonkor_collector2.downloader import downloader
-from toonkor_collector2.models import Chapter, StatusChoices
-from toonkor_collector2.toonkor_api import toonkor_api
+from toonkor_collector2.models import Chapter, StatusChoices, encode_name
 from toonkor_collector2.api import update_cached_chapter
 
 
@@ -55,7 +54,7 @@ class QtConsumer(AsyncWebsocketConsumer):
         chapter_obj.status = StatusChoices.TRANSLATED
         await sync_to_async(chapter_obj.save)()
         update_cached_chapter(toonkor_id, chapter, 'Translated')
-        group = f"download_translate_{toonkor_api.encode_name(toonkor_id)}" 
+        group = f"download_translate_{encode_name(toonkor_id)}" 
         await self.channel_layer.group_send(
             group,
             {
@@ -92,7 +91,7 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
         """
         self.manhwa_id = "/" + self.scope["url_route"]["kwargs"]["toonkor_id"]
         self.group_name = (
-            f"download_translate_{toonkor_api.encode_name(self.manhwa_id)}"
+            f"download_translate_{encode_name(self.manhwa_id)}"
         )
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
