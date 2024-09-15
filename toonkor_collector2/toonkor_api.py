@@ -262,7 +262,7 @@ class ToonkorAPI:
             response = requests.get(img_url, stream=True)
             with open(img_path, "wb") as out_file:
                 out_file.write(response.content)
-            return os.path.basename(manhwa.path) + f"/thumbnail{extension}"
+            return f"{manhwa.media_path}/thumbnail{extension}"
         except:
             return None
 

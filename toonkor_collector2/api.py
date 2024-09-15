@@ -85,7 +85,7 @@ def update_cached_chapter(toonkor_id: str, chapter_index: int, new_status: str) 
 
 def update_manhwa_from_mangadex(manhwa: dict, manhwa_db: Manhwa | None):
     """Update Manhwa details using Mangadex API if necessary."""
-    mangadex_search = mangadex_api.search(manhwa.get("title"))
+    mangadex_search = mangadex_api.search(manhwa["title"])
     if mangadex_search:
         mangadex_data = mangadex_search[0]
         manhwa.update(mangadex_data)
@@ -96,7 +96,10 @@ def update_manhwa_from_mangadex(manhwa: dict, manhwa_db: Manhwa | None):
             manhwa_db.en_description = manhwa.get("en_description", "")
             manhwa_db.mangadex_id = manhwa.get("mangadex_id", "")
             manhwa_db.save()
-        
+
+    else:
+        manhwa['en_title'] = ''
+        manhwa['en_description'] = ''
 
 def get_manhwa_details(toonkor_id: str) -> dict:
     """Get Manhwa details from Toonkor API and update using Mangadex if needed."""
@@ -131,11 +134,7 @@ def get_manhwa_details(toonkor_id: str) -> dict:
 def add_manhwa_to_library(toonkor_id: str) -> bool:
     """Add a Manhwa to the library from Toonkor and Mangadex details."""
     try:
-        manhwa_dict = cached_manhwas.get(toonkor_id, toonkor_api.get_manga_details(toonkor_id))
-        mangadex_search = mangadex_api.search(manhwa_dict.get('title', ''))
-        
-        if mangadex_search:
-            manhwa_dict.update(mangadex_search[0])
+        manhwa_dict = get_manhwa_details(toonkor_id)
 
         # Filter out keys not in the Manhwa model fields
         model_fields = {field.name for field in Manhwa._meta.get_fields()}
@@ -292,7 +291,7 @@ def chapter(request, toonkor_id: str, choice: str):
     return {
         'manhwa_id': manhwa_dict['toonkor_id'],
         'manhwa_title': manhwa_dict['title'],
-        'manhwa_en_title': manhwa_dict['en_title'],
+        'manhwa_en_title': manhwa_dict.get('en_title'),
         'prev_chapter': prev_chapter,
         'current_chapter': current_chapter,
         'next_chapter': next_chapter,
