@@ -150,7 +150,6 @@ def add_manhwa_to_library(toonkor_id: str) -> bool:
 
         # Update cache
         manhwa_dict["in_library"] = True
-        manhwa_dict["thumbnail"] = thumbnail_path
         cached_manhwas[toonkor_id] = manhwa_dict
         return True
     except Exception as e:
