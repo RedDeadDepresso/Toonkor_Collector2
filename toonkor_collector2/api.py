@@ -47,13 +47,13 @@ def search_database(toonkor_id: str) -> Manhwa | None:
         return None
 
 
-def database_chapters(manhwa: Manhwa) -> list:
+def database_chapters(manhwa_id: str) -> list:
     chapters_db_dict = dict()
     try:
-        chapters_db = Chapter.objects.filter(manhwa=manhwa)
-        chapters_db_dict = {chapter_db.index: model_to_dict(chapter_db) for chapter_db in chapters_db}
-    except:
-        pass
+        chapters_db = Chapter.objects.filter(manhwa_id=manhwa_id)
+        chapters_db_dict = {chapter_db.index: model_to_dict(chapter_db, exclude=['manhwa_id']) for chapter_db in chapters_db}
+    except Exception as e:
+        print(e)
     return chapters_db_dict
 
 
@@ -108,16 +108,13 @@ def get_manhwa_details(toonkor_id: str) -> dict:
 
     if manhwa_db is not None:
         manhwa = model_to_dict(manhwa_db)
-        manhwa["chapters"] = database_chapters(manhwa_db)
         manhwa["in_library"] = True
 
+    manhwa["chapters"] = database_chapters(toonkor_id)
+
     try:
-        toonkor_details = toonkor_api.get_manga_details(toonkor_id, manhwa.get('chapters', dict()))
+        toonkor_details = toonkor_api.get_manga_details(toonkor_id, manhwa['chapters'])
         manhwa.update(toonkor_details)
-        toonkor_chapters_num = len(manhwa['chapters'])
-        if manhwa_db is not None and toonkor_chapters_num > manhwa_db.chapters_num:
-            manhwa_db.chapters_num = toonkor_chapters_num
-            manhwa_db.save()
         # Update from Mangadex if essential fields are missing
         if not all([manhwa.get("en_title"), manhwa.get("en_description"), manhwa.get("mangadex_id")]):
             update_manhwa_from_mangadex(manhwa, manhwa_db)
@@ -269,8 +266,7 @@ def is_page(file):
 @api.get("/chapter", response=ChapterPaginationSchema)
 def chapter(request, toonkor_id: str, choice: str):
     chapter_db = get_object_or_404(Chapter, toonkor_id=toonkor_id)
-    manhwa_id = chapter_db.manhwa.toonkor_id
-    manhwa_dict = get_manhwa_details(manhwa_id)
+    manhwa_dict = get_manhwa_details(chapter_db.manhwa_id)
 
     prev_chapter = chapter_from_index(manhwa_dict, chapter_db.index - 1)
     current_chapter = chapter_from_index(manhwa_dict, chapter_db.index)

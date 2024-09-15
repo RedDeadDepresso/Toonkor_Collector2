@@ -67,22 +67,22 @@ class Downloader:
         await self._send_progress(group_name, chapters, progress)
 
         try:
-            manhwa_obj = await sync_to_async(Manhwa.objects.get)(toonkor_id=manhwa_id)
 
             # Process each chapter in the list
             for chapter in chapters:
-                pages_path = await asyncio.to_thread(toonkor_api.download_chapter, manhwa_obj, chapter)
+                pages_path = await asyncio.to_thread(toonkor_api.download_chapter, manhwa_id, chapter)
 
                 if pages_path:
                     progress["current"] += 1
 
                     chapter_obj, _ = await sync_to_async(Chapter.objects.get_or_create)(
-                        manhwa=manhwa_obj,
+                        manhwa_id=manhwa_id,
                         index=chapter['index'],
                         toonkor_id=chapter['toonkor_id'],
                         date_upload=chapter['date_upload']
                     )
-                    chapter_obj.status = StatusChoices.DOWNLOADED
+                    if not chapter_obj.status == StatusChoices.TRANSLATED:
+                        chapter_obj.status = StatusChoices.DOWNLOADED
                     await sync_to_async(chapter_obj.save)()
 
                     chapter['status'] = new_status

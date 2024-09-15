@@ -4,7 +4,7 @@ import json
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from toonkor_collector2.downloader import downloader
-from toonkor_collector2.models import Manhwa, Chapter, StatusChoices
+from toonkor_collector2.models import Chapter, StatusChoices
 from toonkor_collector2.toonkor_api import toonkor_api
 from toonkor_collector2.api import update_cached_chapter
 
@@ -49,9 +49,8 @@ class QtConsumer(AsyncWebsocketConsumer):
         data = json.loads(text_data)
         toonkor_id = data["toonkor_id"]
         chapter = int(data["chapter"])
-        manhwa_obj = await sync_to_async(Manhwa.objects.get)(toonkor_id=toonkor_id)
         chapter_obj = await sync_to_async(Chapter.objects.get)(
-            manhwa=manhwa_obj, index=chapter
+            manhwa_id=toonkor_id, index=chapter
         )
         chapter_obj.status = StatusChoices.TRANSLATED
         await sync_to_async(chapter_obj.save)()

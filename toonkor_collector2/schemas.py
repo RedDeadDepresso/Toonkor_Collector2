@@ -1,19 +1,5 @@
-from ninja import ModelSchema, Schema
-from toonkor_collector2.models import Manhwa, Chapter
+from ninja import Schema
 from typing import Literal
-
-
-class ManhwaModelSchema(ModelSchema):
-    class Meta:
-        model = Manhwa
-        fields = (
-            "title",
-            "description",
-            "en_title",
-            "en_description",
-            "thumbnail",
-            "toonkor_id",
-        )
 
 
 class ChapterSchema(Schema):
@@ -46,14 +32,6 @@ class ChapterPaginationSchema(Schema):
     current_chapter: ChapterSchema
     next_chapter: ChapterSchema | None = None
     pages: list[str] 
-
-
-class ChapterModelSchema(ModelSchema):
-    manhwa: ManhwaSchema | None = None
-
-    class Meta:
-        model = Chapter
-        fields = ("manhwa", "index", "status")
 
 
 class SetToonkorUrlSchema(Schema):

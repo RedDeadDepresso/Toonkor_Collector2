@@ -8,7 +8,7 @@ import re
 import os
 import concurrent.futures
 from django.utils.timesince import timesince
-from toonkor_collector2.schemas import Manhwa, ManhwaSchema
+from toonkor_collector2.schemas import ManhwaSchema
 
 
 class ToonkorAPI:
@@ -256,7 +256,7 @@ class ToonkorAPI:
         soup = BeautifulSoup(response.text, "lxml")
         return self.page_list_parse(soup)
 
-    def download_thumbnail(self, manhwa: Manhwa, img_url: str) -> str | None:
+    def download_thumbnail(self, manhwa, img_url: str) -> str | None:
         try:
             os.makedirs(manhwa.path, exist_ok=True)
             _, extension = os.path.splitext(img_url)
@@ -269,20 +269,21 @@ class ToonkorAPI:
             return None
 
     def download_page(
-        self, manhwa: Manhwa, chapter_index: str, page_index: str, page_url: str
+        self, manhwa_path: str, chapter_index: str, page_index: str, page_url: str
     ) -> str:
         with requests.get(page_url, stream=True) as response:
             _, extension = os.path.splitext(page_url)
-            img_path = os.path.abspath(f"{manhwa.path}/{chapter_index}/{page_index}{extension}")
+            img_path = os.path.abspath(f"{manhwa_path}/{chapter_index}/{page_index}{extension}")
             if not os.path.exists(img_path):
                 with open(img_path, "wb") as out_file:
                     out_file.write(response.content)
             return img_path
 
-    def download_chapter(self, manhwa: Manhwa, chapter_dict: dict) -> list[str]:
+    def download_chapter(self, manhwa_id: str, chapter_dict: dict) -> list[str]:
         try:
             # Create necessary directories
-            os.makedirs(f"{manhwa.path}/{chapter_dict['index']}", exist_ok=True)
+            manhwa_path = f"toonkor_collector2/media/{self.encode_name(manhwa_id)}"
+            os.makedirs(f"{manhwa_path}/{chapter_dict['index']}", exist_ok=True)
 
             # Get chapter details
             page_list = self.get_page_list(chapter_dict['toonkor_id'])
@@ -291,7 +292,7 @@ class ToonkorAPI:
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 futures = [
                     executor.submit(
-                        self.download_page, manhwa, chapter_dict["index"], page["index"], page["url"]
+                        self.download_page, manhwa_path, chapter_dict["index"], page["index"], page["url"]
                     )
                     for page in page_list
                 ]
@@ -303,7 +304,7 @@ class ToonkorAPI:
             return list(pages_path)
 
         except Exception as e:
-            print(f"Error downloading chapter {chapter_dict['title']} of {manhwa.toonkor_id}: {str(e)}")
+            print(f"Error downloading chapter {chapter_dict['title']} of {manhwa_id}: {str(e)}")
             return None
 
 
