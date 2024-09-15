@@ -307,7 +307,7 @@ class ManhwaPipeline(ComicTranslatePipeline):
 
 
 class ComicTranslateDjango(ComicTranslate):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, ready_event=None):
         super(ComicTranslateDjango, self).__init__(parent)
         self.file_handler = ManhwaFileHandler()
         self.pipeline = ManhwaPipeline(self)
@@ -317,6 +317,7 @@ class ComicTranslateDjango(ComicTranslate):
         self.websocket.connected.connect(self.on_connected)
         self.websocket.disconnected.connect(self.on_disconnected)
         self.websocket.textMessageReceived.connect(self.receive_message)
+        self.ready_event = ready_event
 
         self.connect_to_server()
 
@@ -325,6 +326,8 @@ class ComicTranslateDjango(ComicTranslate):
 
     def on_connected(self):
         print("ComicTranslate connected to WebSocket server")
+        if self.ready_event:
+            self.ready_event.set()
 
     def on_disconnected(self):
         print("ComicTranslate disconnected from WebSocket server")
@@ -388,7 +391,7 @@ class ComicTranslateDjango(ComicTranslate):
         self.next_manhwa()
 
 
-def run_comic_translate():
+def run_comic_translate(ready_event):
     import sys
     from PySide6.QtGui import QIcon
     from app.ui.dayu_widgets.qt import application
@@ -412,7 +415,7 @@ def run_comic_translate():
         if selected_language != 'English':
             load_translation(app, selected_language)
 
-        test = ComicTranslateDjango()
+        test = ComicTranslateDjango(ready_event=ready_event)
         test.show()
 
 
