@@ -19,10 +19,9 @@ class Downloader:
         """Add a new download task to the queue and start the worker thread if necessary."""
         self.queue.append([manhwa_id, group_name, text_data])
 
-        # Start the worker thread if not already running
         if self.thread is None or not self.thread.is_alive():
             self.thread = threading.Thread(target=self._run_loop)
-            self.thread.daemon = True  # Ensure the thread terminates with the program
+            self.thread.daemon = True
             self.thread.start()
 
     def _run_loop(self):
@@ -55,7 +54,6 @@ class Downloader:
 
     async def download_chapters(self, manhwa_id, group_name, task, chapters):
         """Download chapters and update progress in real-time."""
-        download_dict = {}
         new_status = 'Downloaded' if task == 'download' else 'Translating'
         progress = {"current": 0, "total": len(chapters)}
 
@@ -70,7 +68,9 @@ class Downloader:
 
             # Process each chapter in the list
             for chapter in chapters:
-                pages_path = await asyncio.to_thread(toonkor_api.download_chapter, manhwa_id, chapter)
+                chapter_index: int = chapter['index']
+                download_dict: dict = {manhwa_id: {chapter_index: {}}}
+                pages_path: list[str] = await asyncio.to_thread(toonkor_api.download_chapter, manhwa_id, chapter)
 
                 if pages_path:
                     progress["current"] += 1
@@ -90,12 +90,9 @@ class Downloader:
 
                     # Send progress update
                     await self._send_progress(group_name, [chapter], progress)
-
-                    # Store downloaded chapter information
-                    if manhwa_id not in download_dict:
-                        download_dict[manhwa_id] = {}
-                    download_dict[manhwa_id][chapter['index']] = {"images_set": pages_path}
-
+                    download_dict[manhwa_id][chapter_index] = {"images_set": pages_path}
+                    if task == 'download_translate':
+                        await self._send_translation_request(download_dict)
         except Exception as e:
             await self._send_error(group_name, str(e))
             raise e  # Re-raise exception to handle it in the outer scope
@@ -134,5 +131,4 @@ class Downloader:
         )
 
 
-# Create a global downloader instance
 downloader = Downloader()
