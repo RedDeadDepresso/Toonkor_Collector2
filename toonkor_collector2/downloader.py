@@ -13,58 +13,46 @@ from toonkor_collector2.toonkor_api import toonkor_api
 
 class Downloader:
     def __init__(self):
-        self.queue = deque()
-        self.thread = None
-        self.channel_layer = get_channel_layer()
-        self.comic_proc = None
+        self._queue = deque()
+        self._thread = None
+        self._channel_layer = get_channel_layer()
+        self._comic_proc = None
 
     def append(self, manhwa_id, group_name, text_data):
         """Add a new download task to the queue and start the worker thread if necessary."""
-        self.queue.append([manhwa_id, group_name, text_data])
+        self._queue.append([manhwa_id, group_name, text_data])
 
-        if self.thread is None or not self.thread.is_alive():
-            self.thread = threading.Thread(target=self._run_loop)
-            self.thread.daemon = True
-            self.thread.start()
+        if self._thread is None or not self._thread.is_alive():
+            self._thread = threading.Thread(target=self._run_loop)
+            self._thread.daemon = True
+            self._thread.start()
 
     def _run_comic(self):
         from comic_django import run_comic_translate
-        if self.comic_proc is None or not self.comic_proc.is_alive():
+        if self._comic_proc is None or not self._comic_proc.is_alive():
             ready_event = multiprocessing.Event()
-            self.comic_proc = multiprocessing.Process(target=run_comic_translate, args=(ready_event,))
-            self.comic_proc.daemon = True
-            self.comic_proc.start()
+            self._comic_proc = multiprocessing.Process(target=run_comic_translate, args=(ready_event,))
+            self._comic_proc.daemon = True
+            self._comic_proc.start()
             ready_event.wait()
 
     def _run_loop(self):
         """Worker loop that processes tasks from the queue."""
-        while self.queue:
+        while self._queue:
             try:
                 # Get the next task from the queue
-                manhwa_id, group_name, text_data = self.queue.popleft()
+                manhwa_id, group_name, text_data = self._queue.popleft()
                 data = json.loads(text_data)
                 task = data["task"]
                 chapters = data["chapters"]
 
                 # Run the asynchronous download task
-                asyncio.run(self._handle_task(manhwa_id, group_name, task, chapters))
+                asyncio.run(self._download_chapters(manhwa_id, group_name, task, chapters))
 
             except Exception as e:
                 print(f"Error processing task: {e}")
 
-    async def _handle_task(self, manhwa_id, group_name, task, chapters):
-        """Handle the task of downloading chapters asynchronously."""
-        try:
-            download_dict = await self.download_chapters(manhwa_id, group_name, task, chapters)
-
-            # If the task is download + translation, send the translation request
-            if task == "download_translate":
-                await self._send_translation_request(download_dict)
-
-        except Exception as e:
-            await self._send_error(group_name, str(e))
-
-    async def download_chapters(self, manhwa_id, group_name, task, chapters):
+    async def _download_chapters(self, manhwa_id, group_name, task, chapters):
         """Download chapters and update progress in real-time."""
         new_status = 'Downloaded' if task == 'download' else 'Translating'
         progress = {"current": 0, "total": len(chapters)}
@@ -82,9 +70,9 @@ class Downloader:
             for chapter in chapters:
                 chapter_index: int = chapter['index']
                 download_dict: dict = {manhwa_id: {chapter_index: {}}}
-                pages_path: list[str] = await asyncio.to_thread(toonkor_api.download_chapter, manhwa_id, chapter)
+                page_paths: list[str] = await asyncio.to_thread(toonkor_api.download_chapter, manhwa_id, chapter)
 
-                if pages_path:
+                if page_paths:
                     progress["current"] += 1
 
                     chapter_obj, _ = await sync_to_async(Chapter.objects.get_or_create)(
@@ -102,19 +90,21 @@ class Downloader:
 
                     # Send progress update
                     await self._send_progress(group_name, [chapter], progress)
-                    download_dict[manhwa_id][chapter_index] = {"images_set": pages_path}
+                    download_dict[manhwa_id][chapter_index] = {"page_paths": page_paths}
                     if task == 'download_translate':
                         self._run_comic()
                         await self._send_translation_request(download_dict)
+
+                else:
+                    await self._send_error(group_name, f"Failed to download chapter {chapter['index'] + 1} of {manhwa_id}")
+
         except Exception as e:
             await self._send_error(group_name, str(e))
-            raise e  # Re-raise exception to handle it in the outer scope
-
-        return download_dict
+            raise e
 
     async def _send_progress(self, group_name, chapters, progress):
         """Send progress updates to the WebSocket group."""
-        await self.channel_layer.group_send(
+        await self._channel_layer.group_send(
             group_name,
             {
                 "type": "send_progress",
@@ -125,7 +115,7 @@ class Downloader:
 
     async def _send_error(self, group_name, error_message):
         """Send an error message to the WebSocket group."""
-        await self.channel_layer.group_send(
+        await self._channel_layer.group_send(
             group_name,
             {
                 "type": "send_progress",
@@ -135,7 +125,7 @@ class Downloader:
 
     async def _send_translation_request(self, download_dict):
         """Send translation request to the 'qt' group."""
-        await self.channel_layer.group_send(
+        await self._channel_layer.group_send(
             "qt",
             {
                 "type": "send_translation_request",

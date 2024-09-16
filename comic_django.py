@@ -29,22 +29,22 @@ class Manhwa:
     def progress_total(self, value: int):
         self.progress['total'] = value
 
-    def get_images_set(self, chapter: str) -> set[str]:
-        info = self.chapters_dict.setdefault(chapter, {'images_set': set(), 'translated': False})
-        return info['images_set']
+    def get_page_paths(self, chapter: str) -> set[str]:
+        info = self.chapters_dict.setdefault(chapter, {'page_paths': set(), 'translated': False})
+        return info['page_paths']
 
     def is_translated(self, chapter: str) -> bool:
-        info = self.chapters_dict.setdefault(chapter, {'images_set': set(), 'translated': False})
+        info = self.chapters_dict.setdefault(chapter, {'page_paths': set(), 'translated': False})
         return info['translated']
     
     def get_chapter(self, chapter: str) -> tuple[set[str], bool]:
-        info = self.chapters_dict.setdefault(chapter, {'images_set': set(), 'translated': False})
-        return info['images_set'], info['translated']
+        info = self.chapters_dict.setdefault(chapter, {'page_paths': set(), 'translated': False})
+        return info['page_paths'], info['translated']
 
-    def update_chapter(self, chapter: str, images_set: set[str] = None, translated: bool = None):
-        info = self.chapters_dict.setdefault(chapter, {'images_set': set(), 'translated': False})
-        if images_set is not None:
-            info['images_set'].update(images_set)
+    def update_chapter(self, chapter: str, page_paths: set[str] = None, translated: bool = None):
+        info = self.chapters_dict.setdefault(chapter, {'page_paths': set(), 'translated': False})
+        if page_paths is not None:
+            info['page_paths'].update(page_paths)
         if translated is not None:
             info['translated'] = translated
 
@@ -338,8 +338,8 @@ class ComicTranslateDjango(ComicTranslate):
         for toonkor_id, chapters in data.items():
             manhwa = self.translation_queue.setdefault(toonkor_id, Manhwa(toonkor_id))
             for chapter, details in chapters.items():
-                images_set = details['images_set']
-                manhwa.update_chapter(chapter, images_set=images_set)
+                page_paths = details['page_paths']
+                manhwa.update_chapter(chapter, page_paths=page_paths)
         if restart:
             self.next_manhwa()
 
@@ -350,13 +350,13 @@ class ComicTranslateDjango(ComicTranslate):
                 self.translate_chapter(*next_chapter)
 
     def translate_chapter(self, manhwa: Manhwa, chapter: str):
-        images_set, translated = manhwa.get_chapter(chapter)
+        page_paths, translated = manhwa.get_chapter(chapter)
         if translated:
             self.send_progress(manhwa, chapter)
         else:
             start_chapter_translate = lambda x=manhwa, y=chapter: self.start_chapter_translate(x, y)
             result_callback = lambda x: (self.on_images_loaded(x), start_chapter_translate())
-            self.run_threaded(self.load_images_threaded, result_callback, self.default_error_handler, None, images_set)
+            self.run_threaded(self.load_images_threaded, result_callback, self.default_error_handler, None, page_paths)
 
     def start_chapter_translate(self, manhwa: Manhwa, chapter: str):
         for image_path in self.image_files:

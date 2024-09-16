@@ -280,12 +280,12 @@ class ToonkorAPI:
                     )
                     for page in page_list
                 ]
-                pages_path = {
+                page_paths = {
                     future.result()
                     for future in concurrent.futures.as_completed(futures)
                 }
 
-            return list(pages_path)
+            return list(page_paths)
 
         except Exception as e:
             print(f"Error downloading chapter {chapter_dict['index'] + 1} of {manhwa_id}: {str(e)}")
