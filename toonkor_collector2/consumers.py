@@ -104,7 +104,24 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
         Args:
             text_data (str): JSON string containing the task, manhwa toonkor_id, and chapters to download.
         """
-        downloader.append(self.manhwa_id, self.group_name, text_data)
+        data = json.loads(text_data)
+        task = data["task"]
+        chapters = data["chapters"]
+        progress = {"current": 0, "total": len(chapters)}
+
+        for chapter in chapters:
+            chapter['status'] = 'Downloading'
+            update_cached_chapter(self.manhwa_id, chapter['index'], 'Downloading')
+
+        await self.channel_layer.group_send(
+            self.group_name,
+            {
+                "type": "send_progress",
+                "chapters": chapters,
+                "progress": progress,
+            }
+        )
+        downloader.append(self.manhwa_id, self.group_name, task, chapters)
 
     async def send_progress(self, event):
         """

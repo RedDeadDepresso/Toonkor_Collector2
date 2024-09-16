@@ -18,9 +18,9 @@ class Downloader:
         self._channel_layer = get_channel_layer()
         self._comic_proc = None
 
-    def append(self, manhwa_id, group_name, text_data):
+    def append(self, manhwa_id, group_name, task, chapters):
         """Add a new download task to the queue and start the worker thread if necessary."""
-        self._queue.append([manhwa_id, group_name, text_data])
+        self._queue.append([manhwa_id, group_name, task, chapters])
 
         if self._thread is None or not self._thread.is_alive():
             self._thread = threading.Thread(target=self._run_loop)
@@ -41,12 +41,7 @@ class Downloader:
         while self._queue:
             try:
                 # Get the next task from the queue
-                manhwa_id, group_name, text_data = self._queue.popleft()
-                data = json.loads(text_data)
-                task = data["task"]
-                chapters = data["chapters"]
-
-                # Run the asynchronous download task
+                manhwa_id, group_name, task, chapters = self._queue.popleft()
                 asyncio.run(self._download_chapters(manhwa_id, group_name, task, chapters))
 
             except Exception as e:
@@ -57,16 +52,7 @@ class Downloader:
         new_status = 'Downloaded' if task == 'download' else 'Translating'
         progress = {"current": 0, "total": len(chapters)}
 
-        # Update chapter status to "Downloading"
-        for chapter in chapters:
-            chapter['status'] = 'Downloading'
-            update_cached_chapter(manhwa_id, chapter['index'], 'Downloading')
-
-        await self._send_progress(group_name, chapters, progress)
-
         try:
-
-            # Process each chapter in the list
             for chapter in chapters:
                 chapter_index: int = chapter['index']
                 download_dict: dict = {manhwa_id: {chapter_index: {}}}
