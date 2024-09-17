@@ -3,7 +3,6 @@ import threading
 
 from collections import deque
 from channels.layers import get_channel_layer
-from asgiref.sync import sync_to_async
 from toonkor_collector2.api import update_cached_chapter, start_comic_proc
 from toonkor_collector2.models import Chapter, StatusChoices
 from toonkor_collector2.toonkor_api import toonkor_api
@@ -36,41 +35,40 @@ class Downloader:
             except Exception as e:
                 print(f"Error processing task: {e}")
 
+    async def _download_chapter(self, manhwa_id, group_name, task, chapter, progress):
+        chapter_index: int = chapter['index']
+        download_dict: dict = {manhwa_id: {chapter_index: {}}}
+        page_paths: list[str] = await asyncio.to_thread(toonkor_api.download_chapter, manhwa_id, chapter)
+
+        if page_paths:
+            progress["current"] += 1
+
+            chapter_obj, _ = await Chapter.objects.aget_or_create(
+                manhwa_id=manhwa_id,
+                index=chapter['index'],
+                toonkor_id=chapter['toonkor_id'],
+                date_upload=chapter['date_upload']
+            )
+            chapter_obj.download_status = StatusChoices.READY
+            await chapter_obj.asave()
+
+            chapter['download_status'] = 'READY'
+            update_cached_chapter(manhwa_id, chapter['index'], "download_status", 'READY')
+
+            # Send progress update
+            await self._send_progress(group_name, [chapter], progress)
+            download_dict[manhwa_id][chapter_index] = {"page_paths": page_paths}
+            if task == 'download_translate':
+                start_comic_proc()
+                await self._send_translation_request(download_dict)
+        else:
+            await self._send_error(group_name, f"Failed to download chapter {chapter['index'] + 1} of {manhwa_id}")
+
     async def _download_chapters(self, manhwa_id, group_name, task, chapters):
         """Download chapters and update progress in real-time."""
         progress = {"current": 0, "total": len(chapters)}
-
         try:
-            for chapter in chapters:
-                chapter_index: int = chapter['index']
-                download_dict: dict = {manhwa_id: {chapter_index: {}}}
-                page_paths: list[str] = await asyncio.to_thread(toonkor_api.download_chapter, manhwa_id, chapter)
-
-                if page_paths:
-                    progress["current"] += 1
-
-                    chapter_obj, _ = await sync_to_async(Chapter.objects.get_or_create)(
-                        manhwa_id=manhwa_id,
-                        index=chapter['index'],
-                        toonkor_id=chapter['toonkor_id'],
-                        date_upload=chapter['date_upload']
-                    )
-                    chapter_obj.download_status = StatusChoices.READY
-                    await sync_to_async(chapter_obj.save)()
-
-                    chapter['download_status'] = 'READY'
-                    update_cached_chapter(manhwa_id, chapter['index'], "download_status", 'READY')
-
-                    # Send progress update
-                    await self._send_progress(group_name, [chapter], progress)
-                    download_dict[manhwa_id][chapter_index] = {"page_paths": page_paths}
-                    if task == 'download_translate':
-                        start_comic_proc()
-                        await self._send_translation_request(download_dict)
-
-                else:
-                    await self._send_error(group_name, f"Failed to download chapter {chapter['index'] + 1} of {manhwa_id}")
-
+            await asyncio.gather(*[self._download_chapter(manhwa_id, group_name, task, chapter, progress) for chapter in chapters])
         except Exception as e:
             await self._send_error(group_name, str(e))
             raise e
