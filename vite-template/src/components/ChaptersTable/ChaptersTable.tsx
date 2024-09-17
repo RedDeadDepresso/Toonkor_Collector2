@@ -65,14 +65,17 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
   };
 
   const applyFilters = () => {
-    if (filters.downloaded) {
+    if (filters.downloaded && filters.translated) {
+      setChapters(chapterDataList.filter((chapter) => chapter.download_status === 'READY' && chapter.translation_status === 'READY'));
+    }
+    else if (!filters.downloaded && !filters.translated) {
+      setChapters(chapterDataList);
+    }
+    else if (filters.downloaded) {
       setChapters(chapterDataList.filter((chapter) => chapter.download_status === 'READY'));
     }
-    if (filters.translated) {
+    else if (filters.translated) {
       setChapters(chapterDataList.filter((chapter) => chapter.translation_status === 'READY'));
-    }
-    if (!filters.downloaded && !filters.translated) {
-      setChapters(chapterDataList);
     }
   };
 
@@ -187,7 +190,7 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
             <IconTrash />
           </ActionIcon>
         </Tooltip>
-        <Popover width={300} trapFocus position="bottom" withArrow shadow="md">
+        <Popover trapFocus position="bottom" withArrow shadow="md">
           <Popover.Target>
             <Tooltip label="Filter">
               <ActionIcon variant="default">
@@ -204,6 +207,7 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
               }
             />
             <Checkbox
+              mt="sm"
               label="Translated"
               checked={filters.translated}
               onChange={(event) =>
