@@ -51,9 +51,9 @@ class QtConsumer(AsyncWebsocketConsumer):
         chapter_obj = await sync_to_async(Chapter.objects.get)(
             manhwa_id=toonkor_id, index=chapter
         )
-        chapter_obj.status = StatusChoices.TRANSLATED
+        chapter_obj.translation_status = StatusChoices.READY
         await sync_to_async(chapter_obj.save)()
-        update_cached_chapter(toonkor_id, chapter, 'Translated')
+        update_cached_chapter(toonkor_id, chapter, 'translation_status', 'READY')
         group = f"download_translate_{encode_name(toonkor_id)}" 
         await self.channel_layer.group_send(
             group,
@@ -110,8 +110,11 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
         progress = {"current": 0, "total": len(chapters)}
 
         for chapter in chapters:
-            chapter['status'] = 'Downloading'
-            update_cached_chapter(self.manhwa_id, chapter['index'], 'Downloading')
+            chapter['download_status'] = 'LOADING'
+            update_cached_chapter(self.manhwa_id, chapter['index'], 'download_status', 'LOADING')
+            if task == 'download_translate':
+                chapter['translation_status'] = 'LOADING'
+                update_cached_chapter(self.manhwa_id, chapter['index'], 'translation_status', 'LOADING')
 
         await self.channel_layer.group_send(
             self.group_name,

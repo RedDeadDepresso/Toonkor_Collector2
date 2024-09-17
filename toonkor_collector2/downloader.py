@@ -38,7 +38,6 @@ class Downloader:
 
     async def _download_chapters(self, manhwa_id, group_name, task, chapters):
         """Download chapters and update progress in real-time."""
-        new_status = 'Downloaded' if task == 'download' else 'Translating'
         progress = {"current": 0, "total": len(chapters)}
 
         try:
@@ -56,12 +55,11 @@ class Downloader:
                         toonkor_id=chapter['toonkor_id'],
                         date_upload=chapter['date_upload']
                     )
-                    if not chapter_obj.status == StatusChoices.TRANSLATED:
-                        chapter_obj.status = StatusChoices.DOWNLOADED
+                    chapter_obj.download_status = StatusChoices.READY
                     await sync_to_async(chapter_obj.save)()
 
-                    chapter['status'] = new_status
-                    update_cached_chapter(manhwa_id, chapter['index'], new_status)
+                    chapter['download_status'] = 'READY'
+                    update_cached_chapter(manhwa_id, chapter['index'], "download_status", 'READY')
 
                     # Send progress update
                     await self._send_progress(group_name, [chapter], progress)

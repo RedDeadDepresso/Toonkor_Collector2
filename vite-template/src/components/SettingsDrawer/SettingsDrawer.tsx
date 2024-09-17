@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from 'react';
 import { SettingsContext } from '@/contexts/SettingsContext';
-import { ActionIcon, Button, Drawer, Group, Space, Stack, Switch, Text, TextInput, Title } from '@mantine/core';
+import { ActionIcon, Button, Drawer, Group, Stack, Switch, Text, TextInput } from '@mantine/core';
 import classes from '@/components/SettingsDrawer/SettingsDrawer.module.css';
 import { IconX } from '@tabler/icons-react';
 interface SettingsDrawerProps {

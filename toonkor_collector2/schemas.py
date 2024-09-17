@@ -5,8 +5,10 @@ from typing import Literal
 class ChapterSchema(Schema):
     index: str | int
     date_upload: str = ""
-    status: str
     toonkor_id: str = ''
+
+    download_status: Literal['NOT_READY', 'LOADING', 'READY'] = 'NOT_READY'
+    translation_status: Literal['NOT_READY', 'LOADING', 'READY'] = 'NOT_READY'
 
 
 class ManhwaSchema(Schema):

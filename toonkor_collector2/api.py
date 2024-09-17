@@ -77,7 +77,7 @@ def database_chapters_to_list(chapters_db: dict):
     return chapters_list
 
 
-def update_cached_chapter(toonkor_id: str, chapter_index: int, new_status: str) -> bool:
+def update_cached_chapter(toonkor_id: str, chapter_index: int, key: str, value) -> bool:
     try:
         if not cached_manhwas.get(toonkor_id):
             get_manhwa_details(toonkor_id)
@@ -86,10 +86,10 @@ def update_cached_chapter(toonkor_id: str, chapter_index: int, new_status: str) 
 
         if isinstance(cached_chapters, dict):
             if chapter_index in cached_chapters:
-                cached_chapters[chapter_index]['status'] = new_status
+                cached_chapters[chapter_index][key] = value
                     
         elif isinstance(cached_chapters, list):
-            cached_chapters[chapter_index]['status'] = new_status
+            cached_chapters[chapter_index][key] = value
 
         return True
     except Exception as e:

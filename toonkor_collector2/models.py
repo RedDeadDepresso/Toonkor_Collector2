@@ -38,21 +38,19 @@ class Manhwa(models.Model):
 
 
 class StatusChoices(models.TextChoices):
-    ON_TOONKOR = "On Toonkor", "On Toonkor"
-    DOWNLOADED = "Downloaded", "Downloaded"
-    TRANSLATED = "Translated", "Translated"
+    NOT_READY = "NOT_READY"
+    LOADING = "LOADING"
+    READY = "READY"
 
 
 class Chapter(models.Model):
     index = models.IntegerField()
-    status = models.CharField(
-        max_length=20,
-        choices=StatusChoices.choices,
-        default=StatusChoices.ON_TOONKOR,
-    )
     toonkor_id = models.SlugField(default="")
     date_upload = models.CharField(max_length=512, blank=True)
     manhwa_id = models.CharField(max_length=512)
+
+    download_status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.NOT_READY)
+    translation_status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.NOT_READY)
 
     def __str__(self) -> str:
         return f"{self.manhwa_id} - Chapter {self.index}"

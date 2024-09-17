@@ -8,21 +8,14 @@ import {
   Text,
   rem,
   ActionIcon,
-  Loader,
   Tooltip,
   Popover,
 } from '@mantine/core';
 import classes from './ChaptersTable.module.css';
 import ChapterData from '@/types/chapterData';
-import {
-  IconDownload,
-  IconFilter,
-  IconLanguage,
-  IconLink,
-  IconTrash,
-} from '@tabler/icons-react';
-import MenuLink from '../MenuLinks/MenuLinks';
+import { IconDownload, IconFilter, IconLanguage, IconTrash, IconWorld } from '@tabler/icons-react';
 import { SettingsContext } from '@/contexts/SettingsContext';
+import useOpenURL from '@/hooks/useOpenURL';
 
 interface ChaptersTableProps {
   toonkorId: string | undefined;
@@ -35,10 +28,11 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [filters, setFilters] = useState({
     downloaded: false,
-    translated: false
+    translated: false,
   });
-  const {read} = useContext(SettingsContext);
-  
+  const { read } = useContext(SettingsContext);
+  const { openLocalURL, openToonkorURL } = useOpenURL();
+
   useEffect(() => {
     const ws = new WebSocket(`ws://127.0.0.1:8000/ws/download_translate/${toonkorId}/`);
     setSocket(ws);
@@ -62,27 +56,30 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
     console.log(updatedChapters);
     for (const chapter of updatedChapters) {
       const chapterIndex = chapter.index;
-      chapterDataList[chapterIndex].status = chapter.status;
-      };
+      chapterDataList[chapterIndex].download_status = chapter.download_status;
+      chapterDataList[chapterIndex].translation_status = chapter.translation_status;
+    }
 
     const updatedChapterList = [...chapterDataList];
     setChapters(updatedChapterList);
-  }
+  };
 
   const applyFilters = () => {
     if (filters.downloaded) {
-      setChapters(chapterDataList.filter(chapter => chapter.status === 'Downloaded' || chapter.status === 'Translated'));
-    } else if (filters.translated) {
-      setChapters(chapterDataList.filter(chapter => chapter.status === 'Translated'));
-    } else {
+      setChapters(chapterDataList.filter((chapter) => chapter.download_status === 'READY'));
+    }
+    if (filters.translated) {
+      setChapters(chapterDataList.filter((chapter) => chapter.translation_status === 'READY'));
+    }
+    if (!filters.downloaded && !filters.translated) {
       setChapters(chapterDataList);
     }
   };
 
   const toggleRow = (chapter: ChapterData) => {
-    setSelection(prevSelection =>
+    setSelection((prevSelection) =>
       prevSelection.includes(chapter)
-        ? prevSelection.filter(item => item.index !== chapter.index)
+        ? prevSelection.filter((item) => item.index !== chapter.index)
         : [...prevSelection, chapter]
     );
   };
@@ -91,25 +88,17 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
     setSelection(selection.length === chapters.length ? [] : [...chapters]);
   };
 
-  const download = () => {
-    if (socket) {
-      socket.send(JSON.stringify({
-        task: 'download',
-        toonkor_id: `/${toonkorId}`,
-        chapters: selection,
-      }));
-    }
-  };
-
-  const downloadTranslate = () => {
-    if (socket) {
-      socket.send(JSON.stringify({
-        task: 'download_translate',
-        toonkor_id: `/${toonkorId}`,
-        chapters: selection,
-      }));
-    }
-  };
+  const sendSelection = (task: 'download' | 'download_translate') => {
+      if (socket) {
+        socket.send(
+          JSON.stringify({
+            task: task,
+            toonkor_id: `/${toonkorId}`,
+            chapters: selection,
+          })
+        );
+      }
+  }
 
   const remove = () => {};
 
@@ -117,65 +106,79 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
   for (let i = chapters.length - 1; i >= 0; i--) {
     const chapter = chapters[i];
     const selected = selection.some((item) => item.index === chapter.index);
-  
+
     rows.push(
       <Table.Tr
         key={chapter.index}
         className={cx({ [classes.rowSelected]: selected })}
-        onClick={() => {toggleRow(chapter)}}
+        onClick={() => {
+          toggleRow(chapter);
+        }}
       >
         <Table.Td>
-          <Checkbox
-            checked={selected}
-            disabled={chapter.status === 'Translating'}
-            onChange={() => toggleRow(chapter)}
-          />
+          <Checkbox checked={selected} onChange={() => toggleRow(chapter)} />
         </Table.Td>
         <Table.Td>
           <Group gap="sm">
-            <Text size="sm" fw={500} c={read[chapter.toonkor_id] ? "blue" : undefined}>
+            <Text size="sm" fw={500} c={read[chapter.toonkor_id] ? 'blue' : undefined}>
               {chapter.index + 1}
             </Text>
           </Group>
         </Table.Td>
         <Table.Td>{chapter.date_upload}</Table.Td>
         <Table.Td>
-          <span>
-            {chapter.status === 'Downloading' && (
-              <Loader size="sm" color="orange" />
-            )}
-            {chapter.status === 'Translating' && (
-              <Loader size="sm" color="cyan" />
-            )}
-            {chapter.status}
-          </span>
-        </Table.Td>
-        <Table.Td>
-          <MenuLink chapter={chapter} position='left' newTab={true}>
+          <Group>
+            <Tooltip label="View on Toonkor">
               <ActionIcon
-                variant="gradient"
-                size="lg"
-                aria-label="Gradient action icon"
-                gradient={{ from: 'blue', to: 'cyan', deg: 90 }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  openToonkorURL(chapter.toonkor_id, true)}}
               >
-                <IconLink />
+                <IconWorld size={18} stroke={1.5} />
               </ActionIcon>
-          </MenuLink>
+            </Tooltip>
+            <Tooltip label="View Downloaded">
+              <ActionIcon
+                variant="light"
+                disabled={chapter.download_status === 'NOT_READY'}
+                loading={chapter.download_status === 'LOADING'}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  openLocalURL(chapter.toonkor_id, 'downloaded', false);
+                }}
+              >
+                <IconDownload size={18} stroke={1.5} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="View Translated">
+              <ActionIcon
+                variant="outline"
+                disabled={chapter.translation_status === 'NOT_READY'}
+                loading={chapter.translation_status === 'LOADING'}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  openLocalURL(chapter.toonkor_id, 'translated', false);
+                }}
+              >
+                <IconLanguage size={18} stroke={1.5} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
         </Table.Td>
       </Table.Tr>
     );
-  }  
+  }
 
   return (
     <div>
       <Group justify="end">
         <Tooltip label="Download">
-          <ActionIcon variant="default" onClick={download}>
+          <ActionIcon variant="default" onClick={() => sendSelection("download")}>
             <IconDownload />
           </ActionIcon>
         </Tooltip>
         <Tooltip label="Download & Translate">
-          <ActionIcon variant="default" onClick={downloadTranslate}>
+          <ActionIcon variant="default" onClick={() => sendSelection("download_translate")}>
             <IconLanguage />
           </ActionIcon>
         </Tooltip>
@@ -196,12 +199,16 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
             <Checkbox
               label="Downloaded"
               checked={filters.downloaded}
-              onChange={(event) => setFilters({ ...filters, downloaded: event.currentTarget.checked })}
+              onChange={(event) =>
+                setFilters({ ...filters, downloaded: event.currentTarget.checked })
+              }
             />
             <Checkbox
               label="Translated"
               checked={filters.translated}
-              onChange={(event) => setFilters({ ...filters, translated: event.currentTarget.checked })}
+              onChange={(event) =>
+                setFilters({ ...filters, translated: event.currentTarget.checked })
+              }
             />
           </Popover.Dropdown>
         </Popover>
@@ -219,7 +226,6 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
               </Table.Th>
               <Table.Th>Chapter</Table.Th>
               <Table.Th>Date</Table.Th>
-              <Table.Th>Status</Table.Th>
               <Table.Th>Links</Table.Th>
             </Table.Tr>
           </Table.Thead>
