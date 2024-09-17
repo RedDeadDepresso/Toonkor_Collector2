@@ -1,4 +1,4 @@
-import React, { createContext, useEffect } from 'react';
+import React, { createContext, useEffect, useState } from 'react';
 import { useLocalStorage } from '@mantine/hooks';
 import SettingsData from '@/types/settingsData';
 import { useMantineColorScheme } from '@mantine/core';
@@ -22,6 +22,7 @@ export const SettingsProvider = ({ children }: childrenProps) => {
     });
     const [toonkorUrl, setToonkorUrl] = useLocalStorage({ key: 'toonkor_url', defaultValue: 'https://toonkor434.com' });
     const [read, setRead] = useLocalStorage<readData>({key: 'read', defaultValue: {}})
+    const [comicLoading, setComicLoading] = useState<boolean>(false);
 
     const requestUrl = async (apiUrl: string) => {
       try {
@@ -57,7 +58,9 @@ export const SettingsProvider = ({ children }: childrenProps) => {
             toonkorUrl,
             setToonkorUrl,
             read, 
-            setRead
+            setRead,
+            comicLoading,
+            setComicLoading
         }}>
             {children}
         </SettingsContext.Provider>

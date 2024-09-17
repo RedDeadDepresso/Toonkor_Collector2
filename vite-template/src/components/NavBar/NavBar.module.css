@@ -33,3 +33,8 @@
   width: rem(800px);
   margin: rem(8px)
 }
+
+.actionIcon {
+  border: 0;
+  background-color: inherit;
+}

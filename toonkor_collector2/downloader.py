@@ -1,13 +1,11 @@
 import asyncio
-import json
 import threading
-import multiprocessing
 
 from collections import deque
 from channels.layers import get_channel_layer
 from asgiref.sync import sync_to_async
-from toonkor_collector2.api import update_cached_chapter
-from toonkor_collector2.models import Manhwa, Chapter, StatusChoices
+from toonkor_collector2.api import update_cached_chapter, start_comic_proc
+from toonkor_collector2.models import Chapter, StatusChoices
 from toonkor_collector2.toonkor_api import toonkor_api
 
 
@@ -26,15 +24,6 @@ class Downloader:
             self._thread = threading.Thread(target=self._run_loop)
             self._thread.daemon = True
             self._thread.start()
-
-    def _run_comic(self):
-        from comic_django import run_comic_translate
-        if self._comic_proc is None or not self._comic_proc.is_alive():
-            ready_event = multiprocessing.Event()
-            self._comic_proc = multiprocessing.Process(target=run_comic_translate, args=(ready_event,))
-            self._comic_proc.daemon = True
-            self._comic_proc.start()
-            ready_event.wait()
 
     def _run_loop(self):
         """Worker loop that processes tasks from the queue."""
@@ -78,7 +67,7 @@ class Downloader:
                     await self._send_progress(group_name, [chapter], progress)
                     download_dict[manhwa_id][chapter_index] = {"page_paths": page_paths}
                     if task == 'download_translate':
-                        self._run_comic()
+                        start_comic_proc()
                         await self._send_translation_request(download_dict)
 
                 else:

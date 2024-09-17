@@ -1,5 +1,7 @@
 import re
 import os
+import multiprocessing
+
 from ninja import NinjaAPI
 from django.forms.models import model_to_dict
 from django.core.validators import URLValidator
@@ -14,6 +16,18 @@ from toonkor_collector2.toonkor_api import toonkor_api
 api = NinjaAPI()
 default_value = ManhwaSchema
 cached_manhwas = dict()
+comic_proc = None
+
+
+def start_comic_proc():
+    from comic_django import run_comic_translate
+    global comic_proc
+    if comic_proc is None or not comic_proc.is_alive():
+        ready_event = multiprocessing.Event()
+        comic_proc = multiprocessing.Process(target=run_comic_translate, args=(ready_event,))
+        comic_proc.daemon = True
+        comic_proc.start()
+        ready_event.wait()
 
 
 def is_valid_url(url):
@@ -297,3 +311,9 @@ def chapter(request, toonkor_id: str, choice: str):
 
         'pages': pages
     }
+
+
+@api.get('/open_comic', response=bool)
+def open_comic(request):
+    start_comic_proc()
+    return True

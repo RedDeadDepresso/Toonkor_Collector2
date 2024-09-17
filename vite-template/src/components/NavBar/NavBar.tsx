@@ -1,10 +1,11 @@
-import { Group, Burger, TextInput, ActionIcon, Drawer, rem, Title, Switch } from '@mantine/core';
+import { Group, Burger, TextInput, ActionIcon, Drawer, rem, Title, Switch, Tooltip } from '@mantine/core';
 import { useDisclosure, useInputState } from '@mantine/hooks';
-import { IconSearch, IconAlphabetKorean, IconSettings } from '@tabler/icons-react';
+import { IconSearch, IconAlphabetKorean, IconSettings, IconAppWindow } from '@tabler/icons-react';
 import classes from './NavBar.module.css';
 import { useNavigate } from 'react-router-dom';
 import SettingsDrawer from '../SettingsDrawer/SettingsDrawer';
-import { useEffect } from 'react';
+import { useContext, useEffect } from 'react';
+import { SettingsContext } from '@/contexts/SettingsContext';
 
 
 interface searchBarProps {
@@ -24,6 +25,13 @@ export function NavBar({ showSearchBar, searchPlaceHolder = '', onSearchChange =
   const [opened, { toggle }] = useDisclosure(false);
   const [settingsOpened, { open: openSettings, close: closeSettings }] = useDisclosure(false);
   const [searchValue, setSearchValue] = useInputState<string>('');
+  const {comicLoading, setComicLoading} = useContext(SettingsContext);
+
+  const openComicTranslate = async() => {
+    setComicLoading(true);
+    await fetch('/api/open_comic');
+    setComicLoading(false);
+  }
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -78,7 +86,12 @@ export function NavBar({ showSearchBar, searchPlaceHolder = '', onSearchChange =
         )}
         <Group>
           <SettingsDrawer settingsOpened={settingsOpened} closeSettings={closeSettings}/>
-          <ActionIcon variant="default" size="xl" onClick={openSettings}>
+          <Tooltip label="Open Comic Translate">
+          <ActionIcon className={classes.actionIcon} loading={comicLoading} variant="default" size="xl" radius="xl" onClick={openComicTranslate}>
+            <IconAppWindow />
+          </ActionIcon>
+          </Tooltip>
+          <ActionIcon className={classes.actionIcon} variant="default" size="xl" radius="xl" onClick={openSettings}>
             <IconSettings />
           </ActionIcon>
         </Group>
