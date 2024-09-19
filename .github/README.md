@@ -5,6 +5,9 @@
 ```bash
 pip install -r requirements-django.txt
 ```
+```bash
+python manage.py migrate
+```
 ### Optional
 - [Get a Gemini API key](https://ai.google.dev/gemini-api/docs/api-key)
 
