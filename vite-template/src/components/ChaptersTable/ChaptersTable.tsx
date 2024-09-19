@@ -10,6 +10,8 @@ import {
   ActionIcon,
   Tooltip,
   Popover,
+  Button,
+  Center,
 } from '@mantine/core';
 import classes from './ChaptersTable.module.css';
 import ChapterData from '@/types/chapterData';
@@ -27,6 +29,10 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
   const [selection, setSelection] = useState<ChapterData[]>([]);
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [filters, setFilters] = useState({
+    downloaded: false,
+    translated: false,
+  });
+  const [removeChoices, setRemoveChoices] = useState({
     downloaded: false,
     translated: false,
   });
@@ -91,19 +97,33 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
     setSelection(selection.length === chapters.length ? [] : [...chapters]);
   };
 
-  const sendSelection = (task: 'download' | 'download_translate') => {
-      if (socket) {
-        socket.send(
-          JSON.stringify({
-            task: task,
-            toonkor_id: `/${toonkorId}`,
-            chapters: selection,
-          })
-        );
-      }
+  const sendSelection = (task: 'download' | 'download_translate' | 'remove') => {
+    if (selection.length === 0) return;
+    
+    const filteredSelection = task === "remove" ? removeSelection() : selection;
+    if (socket) {
+      socket.send(
+        JSON.stringify({
+          task: task,
+          toonkor_id: `/${toonkorId}`,
+          chapters: filteredSelection,
+          remove_choices: removeChoices
+        })
+      );
+    }
   }
 
-  const remove = () => {};
+  const removeSelection = () => {
+    if (removeChoices.downloaded && removeChoices.translated) {
+      return selection.filter(selected => selected.download_status !== 'LOADING' || selected.translation_status !== 'LOADING');
+    }
+    else if (removeChoices.downloaded) {
+      return selection.filter(selected => selected.download_status !== 'LOADING');
+    }
+    else if (removeChoices.downloaded) {
+      return selection.filter(selected => selected.translation_status !== 'LOADING');
+    }
+  }
 
   const rows = [];
   for (let i = chapters.length - 1; i >= 0; i--) {
@@ -143,8 +163,9 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
             <Tooltip label="View Downloaded">
               <ActionIcon
                 variant="light"
-                disabled={chapter.download_status === 'NOT_READY'}
-                loading={chapter.download_status === 'LOADING'}
+                disabled={chapter.download_status === 'NOT_READY' || chapter.download_status === 'REMOVING'}
+                loading={chapter.download_status === 'LOADING' || chapter.download_status === 'REMOVING'}
+                color={chapter.download_status === "REMOVING" ? 'red' : undefined}
                 onClick={(event) => {
                   event.stopPropagation();
                   openLocalURL(chapter.toonkor_id, 'downloaded', false);
@@ -156,8 +177,9 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
             <Tooltip label="View Translated">
               <ActionIcon
                 variant="outline"
-                disabled={chapter.translation_status === 'NOT_READY'}
-                loading={chapter.translation_status === 'LOADING'}
+                disabled={chapter.translation_status === 'NOT_READY' || chapter.translation_status === 'REMOVING'}
+                loading={chapter.translation_status === 'LOADING' || chapter.translation_status === 'REMOVING'}
+                color={chapter.translation_status === "REMOVING" ? 'red' : undefined}
                 onClick={(event) => {
                   event.stopPropagation();
                   openLocalURL(chapter.toonkor_id, 'translated', false);
@@ -185,11 +207,37 @@ const ChaptersTable = ({ toonkorId, chapterDataList = [] }: ChaptersTableProps) 
             <IconLanguage />
           </ActionIcon>
         </Tooltip>
-        <Tooltip label="Remove">
-          <ActionIcon variant="default" onClick={remove}>
-            <IconTrash />
-          </ActionIcon>
-        </Tooltip>
+        <Popover trapFocus position="bottom" withArrow shadow="md">
+          <Popover.Target>
+            <Tooltip label="Remove">
+              <ActionIcon variant="default">
+                <IconTrash />
+              </ActionIcon>
+            </Tooltip>
+          </Popover.Target>
+          <Popover.Dropdown>
+            <Checkbox
+              label="Downloaded"
+              checked={removeChoices.downloaded}
+              onChange={(event) =>
+                setRemoveChoices({ ...removeChoices, downloaded: event.currentTarget.checked })
+              }
+            />
+            <Checkbox
+              my="sm"
+              label="Translated"
+              checked={removeChoices.translated}
+              onChange={(event) =>
+                setRemoveChoices({ ...removeChoices, translated: event.currentTarget.checked })
+              }
+            />
+            <Center>
+              <Button variant='filled' color='red' disabled={!removeChoices.downloaded && !removeChoices.translated} onClick={() => sendSelection("remove")}>
+                Remove
+              </Button>
+            </Center>
+          </Popover.Dropdown>
+        </Popover>
         <Popover trapFocus position="bottom" withArrow shadow="md">
           <Popover.Target>
             <Tooltip label="Filter">

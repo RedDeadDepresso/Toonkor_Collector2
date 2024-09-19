@@ -44,7 +44,7 @@ class Downloader:
             for chapter in chapters:
                 chapter_index: int = chapter['index']
                 download_dict: dict = {manhwa_id: {chapter_index: {}}}
-                page_paths: list[str] = await asyncio.to_thread(toonkor_api.download_chapter, manhwa_id, chapter)
+                page_paths: list[str] = toonkor_api.download_chapter(manhwa_id, chapter)
 
                 if page_paths:
                     progress["current"] += 1

@@ -271,16 +271,6 @@ def chapter_from_index(manhwa, index: int) -> ChapterSchema | None:
         return None
     
 
-image_extensions = {'.png', '.jpeg', '.jpg', '.webp', '.gif', '.svg'}
-
-
-def is_page(file):
-    name, extension = os.path.splitext(file)
-    if name.isdigit() and extension in image_extensions:
-        return True
-    return False
-
-
 @api.get("/chapter", response=ChapterPaginationSchema)
 def chapter(request, toonkor_id: str, choice: str):
     chapter_db = get_object_or_404(Chapter, toonkor_id=toonkor_id)
@@ -292,14 +282,9 @@ def chapter(request, toonkor_id: str, choice: str):
 
     pages = []
     if choice == 'downloaded':
-        pages_path = chapter_db.downloaded_path
-        media_pages_path = chapter_db.media_downloaded_path
+        pages = chapter_db.media_download_pages
     elif choice == 'translated':
-        pages_path = chapter_db.translated_path
-        media_pages_path = chapter_db.media_translated_path
-    if os.path.isdir(pages_path):
-        pages = [f'{media_pages_path}/{file}' for file in os.listdir(pages_path) if is_page(file)]
-        pages.sort(key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
+        pages = chapter_db.media_translation_pages
 
     return {
         'manhwa_id': manhwa_dict['toonkor_id'],

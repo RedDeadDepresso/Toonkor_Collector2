@@ -3,6 +3,7 @@ import json
 
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
+from toonkor_collector2.cleaner import cleaner
 from toonkor_collector2.downloader import downloader
 from toonkor_collector2.models import Chapter, StatusChoices, encode_name
 from toonkor_collector2.api import update_cached_chapter
@@ -107,8 +108,14 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
         data = json.loads(text_data)
         task = data["task"]
         chapters = data["chapters"]
-        progress = {"current": 0, "total": len(chapters)}
+        if task == "remove":
+            remove_choices  = data["remove_choices"]        
+            await self.run_remove(chapters, remove_choices)
+        else:
+            await self.run_download_translate(task, chapters)
 
+    async def run_download_translate(self, task, chapters):
+        progress = {"current": 0, "total": len(chapters)}
         for chapter in chapters:
             chapter['download_status'] = 'LOADING'
             update_cached_chapter(self.manhwa_id, chapter['index'], 'download_status', 'LOADING')
@@ -125,6 +132,26 @@ class DownloadTranslateConsumer(AsyncWebsocketConsumer):
             }
         )
         downloader.append(self.manhwa_id, self.group_name, task, chapters)
+
+    async def run_remove(self, chapters, remove_choices):
+        for chapter in chapters:
+            if remove_choices["downloaded"]:
+                chapter['download_status'] = 'REMOVING'
+                update_cached_chapter(self.manhwa_id, chapter['index'], 'download_status', 'REMOVING')
+
+            if remove_choices['translated']:
+                chapter['translation_status'] = 'REMOVING'        
+                update_cached_chapter(self.manhwa_id, chapter['index'], 'remove_status', 'REMOVING')
+
+        await self.channel_layer.group_send(
+            self.group_name,
+            {
+                "type": "send_progress",
+                "chapters": chapters,
+                "progress": {},
+            }
+        )
+        cleaner.append(self.manhwa_id, self.group_name, chapters, remove_choices)
 
     async def send_progress(self, event):
         """

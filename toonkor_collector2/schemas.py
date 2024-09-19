@@ -7,8 +7,8 @@ class ChapterSchema(Schema):
     date_upload: str = ""
     toonkor_id: str = ''
 
-    download_status: Literal['NOT_READY', 'LOADING', 'READY'] = 'NOT_READY'
-    translation_status: Literal['NOT_READY', 'LOADING', 'READY'] = 'NOT_READY'
+    download_status: Literal['NOT_READY', 'LOADING', 'READY', 'REMOVING'] = 'NOT_READY'
+    translation_status: Literal['NOT_READY', 'LOADING', 'READY', 'REMOVING'] = 'NOT_READY'
 
 
 class ManhwaSchema(Schema):
